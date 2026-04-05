@@ -1,5 +1,10 @@
 import request from 'supertest';
 
+jest.mock('./lib/logger', () => {
+  const mock = { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+  return { __esModule: true, default: mock };
+});
+
 jest.mock('./lib/supabase', () => ({
   supabase: {
     from: jest.fn().mockReturnValue({
