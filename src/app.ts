@@ -11,11 +11,11 @@ app.use(express.json());
 app.get('/health', async (_req, res) => {
   try {
     const { error } = await supabase
-      .from('_health_check')
-      .select('*')
+      .from('profiles')
+      .select('id')
       .limit(1);
 
-    if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
+    if (error) {
       logger.error({ err: error }, 'Duomenų bazės ryšys nepasiekiamas');
       res.status(503).json({
         status: 'error',
