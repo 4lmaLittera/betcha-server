@@ -32,10 +32,24 @@ export async function handleAnalyze(
     res.status(200).json({ uploadId, ...result, photoUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Nežinoma klaida';
+    const isTimeout = message === 'AI_TIMEOUT';
 
-    await logAiRequest({ uploadId, status: 'failed', errorReason: message });
+    await logAiRequest({
+      uploadId,
+      status: 'failed',
+      errorReason: isTimeout ? 'timeout' : message,
+    });
 
-    logger.error({ uploadId, err }, 'DI analizės klaida');
+    logger.error({ uploadId, err, isTimeout }, 'DI analizės klaida');
+
+    if (isTimeout) {
+      res.status(408).json({
+        error: 'AI_TIMEOUT',
+        message: 'DI analizė užtruko per ilgai. Galite suvesti duomenis rankiniu būdu.',
+        uploadId,
+      });
+      return;
+    }
 
     res.status(422).json({
       error: 'AI_UNRECOGNIZED',
