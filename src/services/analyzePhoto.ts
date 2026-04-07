@@ -25,23 +25,39 @@ export async function analyzePhoto(
   const base64Image = imageBuffer.toString('base64');
   const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-  const response = await getOpenAI().chat.completions.create({
-    model: 'gpt-4o',
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  let response;
+  try {
+    response = await getOpenAI().chat.completions.create(
       {
-        role: 'user',
-        content: [
+        model: 'gpt-4o',
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
           {
-            type: 'image_url',
-            image_url: { url: dataUrl, detail: 'low' },
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: dataUrl, detail: 'low' },
+              },
+            ],
           },
         ],
+        max_tokens: 300,
       },
-    ],
-    max_tokens: 300,
-  });
+      { signal: controller.signal },
+    );
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('AI_TIMEOUT');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const content = response.choices[0]?.message?.content;
 

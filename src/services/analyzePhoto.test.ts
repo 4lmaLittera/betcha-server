@@ -116,6 +116,15 @@ describe('analyzePhoto', () => {
         model: 'gpt-4o',
         response_format: { type: 'json_object' },
       }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
+  });
+
+  it('turėtų mesti AI_TIMEOUT kai užklausa nutraukiama', async () => {
+    const abortError = new Error('The operation was aborted');
+    abortError.name = 'AbortError';
+    mockCreate.mockRejectedValue(abortError);
+
+    await expect(analyzePhoto(fakeBuffer, 'image/jpeg')).rejects.toThrow('AI_TIMEOUT');
   });
 });
