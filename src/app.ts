@@ -7,6 +7,8 @@ import betsRouter from './routes/bets';
 import uploadRouter from './routes/upload';
 import analyzeRouter from './routes/analyze';
 import tasksRouter from './routes/tasks';
+import shopRouter from './routes/shop';
+import inventoryRouter from './routes/inventory';
 import { handleMulterError } from './middleware/multerError';
 
 const app = express();
@@ -16,6 +18,8 @@ app.use(express.json());
 
 app.use('/api/users', userRoutes);
 app.use('/api/bets', betsRouter);
+app.use('/api/shop', shopRouter);
+app.use('/api/inventory', inventoryRouter);
 
 app.get('/health', async (_req, res) => {
   try {
