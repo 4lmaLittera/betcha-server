@@ -31,7 +31,7 @@ describe('UserController', () => {
         username: 'testuser',
         avatar_url: 'https://avatar.url',
         balance: 1000,
-        total_points: 2500
+        total_points_collected: 2500
       };
 
       (supabase.auth.getUser as jest.Mock).mockResolvedValue({
