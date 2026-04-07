@@ -76,3 +76,69 @@ export async function placeBet(
     res.status(500).json({ error: 'Vidinė serverio klaida', details: message });
   }
 }
+
+export async function getQuestBets(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const { questId } = req.params;
+
+  if (!questId) {
+    res.status(400).json({ error: 'Trūksta questId parametro' });
+    return;
+  }
+
+  try {
+    const { data: bets, error } = await supabase
+      .from('bets')
+      .select(`
+        id,
+        amount,
+        prediction_is_positive,
+        created_at,
+        profiles (
+          id,
+          username,
+          avatar_url
+        )
+      `)
+      .eq('quest_id', questId);
+
+    if (error) {
+      logger.error({ err: error, questId }, 'Klaida gaunant lažybų sąrašą');
+      res.status(500).json({ error: 'Neuždelsiant nepavyko gauti duomenų' });
+      return;
+    }
+
+    let totalPool = 0;
+    const forBets: any[] = [];
+    const againstBets: any[] = [];
+
+    bets?.forEach((bet) => {
+      totalPool += bet.amount;
+
+      const betInfo = {
+        id: bet.id,
+        amount: bet.amount,
+        createdAt: bet.created_at,
+        profile: Array.isArray(bet.profiles) ? bet.profiles[0] : bet.profiles,
+      };
+
+      if (bet.prediction_is_positive) {
+        forBets.push(betInfo);
+      } else {
+        againstBets.push(betInfo);
+      }
+    });
+
+    res.status(200).json({
+      totalPool,
+      forBets,
+      againstBets,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Nežinoma klaida';
+    logger.error({ err, questId }, 'Netikėta klaida gaunant lažybų sąrašą');
+    res.status(500).json({ error: 'Vidinė serverio klaida', details: message });
+  }
+}
