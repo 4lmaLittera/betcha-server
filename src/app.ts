@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { supabase } from './lib/supabase';
 import logger from './lib/logger';
+import userRoutes from './routes/userRoutes';
 import betsRouter from './routes/bets';
 import uploadRouter from './routes/upload';
 import analyzeRouter from './routes/analyze';
@@ -13,6 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/users', userRoutes);
 app.use('/api/bets', betsRouter);
 
 app.get('/health', async (_req, res) => {
