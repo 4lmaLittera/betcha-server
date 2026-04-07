@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import logger from './lib/logger';
 import uploadRouter from './routes/upload';
 import analyzeRouter from './routes/analyze';
+import tasksRouter from './routes/tasks';
 import { handleMulterError } from './middleware/multerError';
 
 const app = express();
@@ -43,6 +44,7 @@ app.get('/health', async (_req, res) => {
 
 app.use('/api/upload', uploadRouter);
 app.use('/api/analyze', analyzeRouter);
+app.use('/api/tasks', tasksRouter);
 
 app.use(handleMulterError);
 
