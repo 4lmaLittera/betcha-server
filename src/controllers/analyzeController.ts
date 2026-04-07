@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { analyzePhoto } from '../services/analyzePhoto';
 import { logAiRequest } from '../services/aiLog';
+import { uploadToStorage } from '../services/storage';
 import logger from '../lib/logger';
 
 export async function handleAnalyze(
@@ -19,14 +20,16 @@ export async function handleAnalyze(
   try {
     const result = await analyzePhoto(req.file.buffer, req.file.mimetype);
 
+    const photoUrl = await uploadToStorage(req.file.buffer, req.file.mimetype, uploadId);
+
     await logAiRequest({ uploadId, status: 'success' });
 
     logger.info(
-      { uploadId, userId: req.user?.id, verdict: result.verdict },
+      { uploadId, userId: req.user?.id, verdict: result.verdict, photoUrl },
       'Nuotraukos analizė sėkminga',
     );
 
-    res.status(200).json({ uploadId, ...result });
+    res.status(200).json({ uploadId, ...result, photoUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Nežinoma klaida';
 
