@@ -2,11 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import { supabase } from './lib/supabase';
 import logger from './lib/logger';
+import userRoutes from './routes/userRoutes';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/api/users', userRoutes);
 
 app.get('/health', async (_req, res) => {
   try {
