@@ -13,7 +13,7 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('username, avatar_url, balance, total_points_collected')
+      .select('id, username, avatar_url, balance, total_points_collected')
       .eq('id', userId)
       .single();
 
