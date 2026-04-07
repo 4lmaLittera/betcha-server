@@ -6,13 +6,13 @@ jest.mock('../lib/logger', () => {
 const mockCreate = jest.fn();
 
 jest.mock('../lib/openai', () => ({
-  openai: {
+  getOpenAI: () => ({
     chat: {
       completions: {
         create: (...args: unknown[]) => mockCreate(...args),
       },
     },
-  },
+  }),
 }));
 
 import { analyzePhoto } from './analyzePhoto';

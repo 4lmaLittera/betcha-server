@@ -1,9 +1,14 @@
 import OpenAI from 'openai';
 
-const apiKey = process.env.OPENAI_API_KEY;
+let instance: OpenAI | null = null;
 
-if (!apiKey) {
-  throw new Error('Trūksta OPENAI_API_KEY aplinkos kintamojo');
+export function getOpenAI(): OpenAI {
+  if (!instance) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Trūksta OPENAI_API_KEY aplinkos kintamojo');
+    }
+    instance = new OpenAI({ apiKey });
+  }
+  return instance;
 }
-
-export const openai = new OpenAI({ apiKey });

@@ -1,4 +1,4 @@
-import { openai } from '../lib/openai';
+import { getOpenAI } from '../lib/openai';
 import logger from '../lib/logger';
 
 export interface AnalysisResult {
@@ -25,7 +25,7 @@ export async function analyzePhoto(
   const base64Image = imageBuffer.toString('base64');
   const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     response_format: { type: 'json_object' },
     messages: [
