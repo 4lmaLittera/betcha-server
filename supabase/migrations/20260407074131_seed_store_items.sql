@@ -1,1 +1,2 @@
-INSERT INTO public.store_items (name, description, price) VALUES ('Nemokamas gerimas', 'Vienas nemokamas gerimas jusu pasirinktoje kavineje.', 500), ('Privatus kanalas', 'Prieiga prie slapto kanalo, kuriame dalinames geriausiais statymais.', 2000), ('Dvigubas XP (1 val.)', 'Gaukite dvigubai daugiau XP u� visas u�duotis 1 valanda.', 1200); CREATE INDEX IF NOT EXISTS idx_store_items_price ON public.store_items(price);
+-- Ši migracija pašalinta dėl neteisingos koduotės ir netinkamų seed duomenų.
+-- Palikta tuščia tyčia, kad nebekeltų UTF-8 klaidų Supabase Preview metu.
