@@ -38,5 +38,3 @@ BEGIN
   DELETE FROM public.store_items
    WHERE name NOT IN ('Praleisti užduotį', 'Laisva diena', 'XP boost 24 h');
 END $$;
-
-COMMENT ON FUNCTION pg_catalog.pg_sleep IS NULL; -- no-op to keep file ending consistent
