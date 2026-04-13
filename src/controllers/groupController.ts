@@ -105,3 +105,103 @@ export async function handleJoinGroup(
   logger.info({ groupId: group.id, userId }, 'Vartotojas prisijungė prie grupės');
   res.status(200).json({ groupId: group.id, name: group.name });
 }
+
+export async function handleGetMyGroups(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const userId = req.user!.id;
+
+  const { data: memberships, error } = await supabase
+    .from('group_members')
+    .select('role, groups(id, name, invite_code, created_by_id)')
+    .eq('profile_id', userId);
+
+  if (error) {
+    logger.error({ err: error, userId }, 'Nepavyko gauti grupių sąrašo');
+    res.status(500).json({ error: 'Nepavyko gauti grupių sąrašo' });
+    return;
+  }
+
+  const groupIds = memberships.map((m: any) => (m.groups as any).id);
+
+  const { data: counts, error: countError } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .in('group_id', groupIds);
+
+  const memberCounts: Record<string, number> = {};
+  if (!countError && counts) {
+    for (const row of counts) {
+      memberCounts[row.group_id] = (memberCounts[row.group_id] || 0) + 1;
+    }
+  }
+
+  const groups = memberships.map((m: any) => ({
+    id: (m.groups as any).id,
+    name: (m.groups as any).name,
+    inviteCode: (m.groups as any).invite_code,
+    createdById: (m.groups as any).created_by_id,
+    role: m.role,
+    memberCount: memberCounts[(m.groups as any).id] || 0,
+  }));
+
+  res.status(200).json(groups);
+}
+
+export async function handleGetGroupMembers(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const { id: groupId } = req.params;
+  const userId = req.user!.id;
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('profile_id', userId)
+    .single();
+
+  if (membershipError || !membership) {
+    res.status(403).json({ error: 'Neturite prieigos prie šios grupės' });
+    return;
+  }
+
+  const { data: group, error: groupError } = await supabase
+    .from('groups')
+    .select('id, name, invite_code')
+    .eq('id', groupId)
+    .single();
+
+  if (groupError || !group) {
+    res.status(404).json({ error: 'Grupė nerasta' });
+    return;
+  }
+
+  const { data: members, error: membersError } = await supabase
+    .from('group_members')
+    .select('profile_id, role, joined_at, profiles(username, avatar_url)')
+    .eq('group_id', groupId);
+
+  if (membersError) {
+    logger.error({ err: membersError, groupId }, 'Nepavyko gauti narių sąrašo');
+    res.status(500).json({ error: 'Nepavyko gauti narių sąrašo' });
+    return;
+  }
+
+  const result = {
+    id: group.id,
+    name: group.name,
+    inviteCode: group.invite_code,
+    members: members.map((m: any) => ({
+      profileId: m.profile_id,
+      username: (m.profiles as any)?.username ?? null,
+      avatarUrl: (m.profiles as any)?.avatar_url ?? null,
+      role: m.role,
+      joinedAt: m.joined_at,
+    })),
+  };
+
+  res.status(200).json(result);
+}
