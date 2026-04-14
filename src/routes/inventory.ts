@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getInventory, useItem } from '../controllers/inventoryController';
-import { authenticate } from '../middleware/auth';
+import { requireAuth as authenticate } from '../middleware/auth';
 
 const router = Router();
 

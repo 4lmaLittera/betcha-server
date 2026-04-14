@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getStoreItems, purchaseItem } from '../controllers/shopController';
-import { authenticate } from '../middleware/auth';
+import { requireAuth as authenticate } from '../middleware/auth';
 
 const router = Router();
 
