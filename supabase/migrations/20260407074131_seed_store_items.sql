@@ -1,0 +1,2 @@
+-- Ši migracija pašalinta dėl neteisingos koduotės ir netinkamų seed duomenų.
+-- Palikta tuščia tyčia, kad nebekeltų UTF-8 klaidų Supabase Preview metu.
