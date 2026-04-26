@@ -8,6 +8,8 @@ jest.mock('../lib/logger', () => {
 const mockInsert = jest.fn();
 const mockSelect = jest.fn();
 const mockSingle = jest.fn();
+const mockQuestMaybeSingle = jest.fn();
+const mockBetsResult = jest.fn();
 
 jest.mock('../lib/supabase', () => ({
   supabase: {
@@ -17,20 +19,39 @@ jest.mock('../lib/supabase', () => ({
         error: null,
       }),
     },
-    from: () => ({
-      insert: (...args: unknown[]) => {
-        mockInsert(...args);
+    from: (table: string) => {
+      if (table === 'quests') {
         return {
-          select: (...sArgs: unknown[]) => {
-            mockSelect(...sArgs);
-            return { single: mockSingle };
+          insert: (...args: unknown[]) => {
+            mockInsert(...args);
+            return {
+              select: (...sArgs: unknown[]) => {
+                mockSelect(...sArgs);
+                return { single: mockSingle };
+              },
+            };
           },
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => mockQuestMaybeSingle(),
+            }),
+            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }),
         };
-      },
-      select: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-      }),
-    }),
+      }
+      if (table === 'bets') {
+        return {
+          select: () => ({
+            eq: () => mockBetsResult(),
+          }),
+        };
+      }
+      return {
+        select: jest.fn().mockReturnValue({
+          limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      };
+    },
   },
 }));
 
@@ -106,5 +127,117 @@ describe('POST /api/tasks', () => {
     const response = await request(app).post('/api/tasks').send(validBody);
 
     expect(response.status).toBe(401);
+  });
+});
+
+describe('GET /api/tasks/:taskId', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const questRow = {
+    id: 'task-123',
+    group_id: 'group-abc',
+    title: 'Netvarkinga virtuvė',
+    description: 'Indai ant stalo',
+    status: 'open',
+    difficulty_score: 6,
+    ai_verdict_reason: null,
+    initial_image_url: 'https://example.com/initial.jpg',
+    evidence_image_url: null,
+    created_at: '2026-04-26T10:00:00Z',
+    completed_at: null,
+    creator: { id: 'creator-1', username: 'Tomas', avatar_url: null },
+    assigned: { id: 'assignee-1', username: 'Petras', avatar_url: null },
+  };
+
+  it('turėtų grąžinti pilną užduoties informaciją su agreguotomis lažybomis', async () => {
+    mockQuestMaybeSingle.mockResolvedValue({ data: questRow, error: null });
+    mockBetsResult.mockResolvedValue({
+      data: [
+        { amount: 50, prediction_is_positive: true },
+        { amount: 30, prediction_is_positive: true },
+        { amount: 20, prediction_is_positive: false },
+      ],
+      error: null,
+    });
+
+    const response = await request(app)
+      .get('/api/tasks/task-123')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      id: 'task-123',
+      groupId: 'group-abc',
+      title: 'Netvarkinga virtuvė',
+      description: 'Indai ant stalo',
+      status: 'open',
+      difficultyScore: 6,
+      aiVerdictReason: null,
+      initialImageUrl: 'https://example.com/initial.jpg',
+      evidenceImageUrl: null,
+      createdAt: '2026-04-26T10:00:00Z',
+      completedAt: null,
+      creator: { id: 'creator-1', username: 'Tomas', avatar_url: null },
+      assignedTo: { id: 'assignee-1', username: 'Petras', avatar_url: null },
+      bets: { totalPool: 100, forCount: 2, againstCount: 1 },
+    });
+  });
+
+  it('turėtų grąžinti 404 kai užduotis nerasta', async () => {
+    mockQuestMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const response = await request(app)
+      .get('/api/tasks/missing-id')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toContain('nerasta');
+  });
+
+  it('turėtų grąžinti tuščią lažybų agregaciją kai nėra statymų', async () => {
+    mockQuestMaybeSingle.mockResolvedValue({ data: questRow, error: null });
+    mockBetsResult.mockResolvedValue({ data: [], error: null });
+
+    const response = await request(app)
+      .get('/api/tasks/task-123')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body.bets).toEqual({ totalPool: 0, forCount: 0, againstCount: 0 });
+  });
+
+  it('turėtų grąžinti assignedTo null kai užduotis nepriskirta', async () => {
+    mockQuestMaybeSingle.mockResolvedValue({
+      data: { ...questRow, assigned: null },
+      error: null,
+    });
+    mockBetsResult.mockResolvedValue({ data: [], error: null });
+
+    const response = await request(app)
+      .get('/api/tasks/task-123')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body.assignedTo).toBeNull();
+  });
+
+  it('turėtų atmesti be autorizacijos', async () => {
+    const response = await request(app).get('/api/tasks/task-123');
+    expect(response.status).toBe(401);
+  });
+
+  it('turėtų grąžinti 500 kai DB klaida', async () => {
+    mockQuestMaybeSingle.mockResolvedValue({
+      data: null,
+      error: { message: 'DB error' },
+    });
+
+    const response = await request(app)
+      .get('/api/tasks/task-123')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(500);
   });
 });
