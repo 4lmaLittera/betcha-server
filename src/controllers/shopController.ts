@@ -8,6 +8,7 @@ export const getStoreItems = async (_req: AuthenticatedRequest, res: Response) =
     const { data, error } = await supabase
       .from('store_items')
       .select('*')
+      .eq('is_active', true)
       .order('price', { ascending: true });
 
     if (error) throw error;
@@ -32,6 +33,7 @@ export const purchaseItem = async (req: AuthenticatedRequest, res: Response) => 
       .from('store_items')
       .select('*')
       .eq('id', itemId)
+      .eq('is_active', true)
       .single();
 
     if (itemError || !item) {
