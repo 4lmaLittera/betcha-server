@@ -29,15 +29,23 @@ export async function analyzePhoto(
   const base64Image = imageBuffer.toString('base64');
   const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
+  const FIRST_CHUNK_TIMEOUT_MS = 20000;
+  const IDLE_TIMEOUT_MS = 5000;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
+  let timer: NodeJS.Timeout | undefined;
+  const armTimer = (ms: number) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), ms);
+  };
 
-  let response;
+  let content = '';
   try {
-    response = await getOpenAI().chat.completions.create(
+    armTimer(FIRST_CHUNK_TIMEOUT_MS);
+    const stream = await getOpenAI().chat.completions.create(
       {
         model: 'gpt-4o',
         response_format: { type: 'json_object' },
+        stream: true,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -54,16 +62,20 @@ export async function analyzePhoto(
       },
       { signal: controller.signal },
     );
+
+    for await (const chunk of stream) {
+      armTimer(IDLE_TIMEOUT_MS);
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) content += delta;
+    }
   } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
+    if (controller.signal.aborted) {
       throw new Error('AI_TIMEOUT');
     }
     throw err;
   } finally {
-    clearTimeout(timeout);
+    if (timer) clearTimeout(timer);
   }
-
-  const content = response.choices[0]?.message?.content;
 
   if (!content) {
     throw new Error('OpenAI negrąžino atsakymo');
