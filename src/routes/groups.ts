@@ -5,6 +5,7 @@ import {
   handleJoinGroup,
   handleGetMyGroups,
   handleGetGroupMembers,
+  handleGetGroupStats,
 } from '../controllers/groupController';
 
 const router = Router();
@@ -12,6 +13,7 @@ const router = Router();
 router.post('/', requireAuth, handleCreateGroup);
 router.post('/join', requireAuth, handleJoinGroup);
 router.get('/', requireAuth, handleGetMyGroups);
+router.get('/:id/stats', requireAuth, handleGetGroupStats);
 router.get('/:id/members', requireAuth, handleGetGroupMembers);
 
 export default router;
