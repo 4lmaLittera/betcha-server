@@ -300,6 +300,7 @@ export async function handleResolveTask(
 ): Promise<void> {
   const { taskId } = req.params;
   const { resolution_is_positive } = req.body as ResolveTaskBody;
+  const userId = req.user!.id;
 
   if (!taskId) {
     res.status(400).json({ error: 'Trūksta taskId parametro' });
@@ -309,6 +310,43 @@ export async function handleResolveTask(
   if (typeof resolution_is_positive !== 'boolean') {
     res.status(400).json({ error: 'resolution_is_positive turi būti boolean reikšmė' });
     return;
+  }
+
+  const { data: quest, error: questError } = await supabase
+    .from('quests')
+    .select('id, group_id, creator_id')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (questError) {
+    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį sprendimui');
+    res.status(500).json({ error: 'Nepavyko gauti užduoties' });
+    return;
+  }
+
+  if (!quest) {
+    res.status(404).json({ error: 'Užduotis nerasta' });
+    return;
+  }
+
+  if (quest.creator_id !== userId) {
+    const { data: membership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('role')
+      .eq('group_id', quest.group_id)
+      .eq('profile_id', userId)
+      .maybeSingle();
+
+    if (membershipError) {
+      logger.error({ err: membershipError, taskId, userId }, 'Klaida tikrinant narystę sprendimui');
+      res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
+      return;
+    }
+
+    if (!membership || membership.role !== 'admin') {
+      res.status(403).json({ error: 'Neturite teisės spręsti šios užduoties' });
+      return;
+    }
   }
 
   try {
