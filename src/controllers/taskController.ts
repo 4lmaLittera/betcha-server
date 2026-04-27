@@ -8,13 +8,14 @@ interface CreateTaskBody {
   description: string;
   bettingIndex: number;
   groupId: string;
+  photoUrl?: string;
 }
 
 export async function handleCreateTask(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const { title, description, bettingIndex, groupId } = req.body as CreateTaskBody;
+  const { title, description, bettingIndex, groupId, photoUrl } = req.body as CreateTaskBody;
 
   if (!title || !title.trim()) {
     res.status(400).json({ error: 'Pavadinimas yra privalomas' });
@@ -68,8 +69,9 @@ export async function handleCreateTask(
       creator_id: creatorId,
       assigned_to: assignedTo,
       status: 'open',
+      initial_image_url: photoUrl?.trim() || null,
     })
-    .select('id, assigned_to')
+    .select('id, assigned_to, initial_image_url')
     .single();
 
   if (error) {
@@ -83,7 +85,11 @@ export async function handleCreateTask(
     'Užduotis sukurta',
   );
 
-  res.status(201).json({ id: data.id, assignedTo: data.assigned_to });
+  res.status(201).json({
+    id: data.id,
+    assignedTo: data.assigned_to,
+    initialImageUrl: data.initial_image_url,
+  });
 }
 
 export async function handleGetTaskById(

@@ -77,7 +77,11 @@ describe('POST /api/tasks', () => {
       error: null,
     });
     mockSingle.mockResolvedValue({
-      data: { id: 'task-123', assigned_to: 'test-user-id' },
+      data: {
+        id: 'task-123',
+        assigned_to: 'test-user-id',
+        initial_image_url: null,
+      },
       error: null,
     });
   });
@@ -96,7 +100,11 @@ describe('POST /api/tasks', () => {
       .send(validBody);
 
     expect(response.status).toBe(201);
-    expect(response.body).toEqual({ id: 'task-123', assignedTo: 'test-user-id' });
+    expect(response.body).toEqual({
+      id: 'task-123',
+      assignedTo: 'test-user-id',
+      initialImageUrl: null,
+    });
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Netvarkinga virtuvė',
@@ -105,7 +113,31 @@ describe('POST /api/tasks', () => {
         group_id: 'group-abc',
         creator_id: 'test-user-id',
         assigned_to: 'test-user-id',
+        initial_image_url: null,
       }),
+    );
+  });
+
+  it('turėtų išsaugoti photoUrl į initial_image_url ir grąžinti atsakyme', async () => {
+    const photoUrl = 'https://example.supabase.co/storage/v1/object/public/photos/abc.jpg';
+    mockSingle.mockResolvedValue({
+      data: {
+        id: 'task-123',
+        assigned_to: 'test-user-id',
+        initial_image_url: photoUrl,
+      },
+      error: null,
+    });
+
+    const response = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ ...validBody, photoUrl });
+
+    expect(response.status).toBe(201);
+    expect(response.body.initialImageUrl).toBe(photoUrl);
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ initial_image_url: photoUrl }),
     );
   });
 
