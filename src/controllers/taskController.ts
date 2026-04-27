@@ -8,13 +8,14 @@ interface CreateTaskBody {
   description: string;
   bettingIndex: number;
   groupId: string;
+  photoUrl?: string;
 }
 
 export async function handleCreateTask(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const { title, description, bettingIndex, groupId } = req.body as CreateTaskBody;
+  const { title, description, bettingIndex, groupId, photoUrl } = req.body as CreateTaskBody;
 
   if (!title || !title.trim()) {
     res.status(400).json({ error: 'Pavadinimas yra privalomas' });
@@ -36,6 +37,28 @@ export async function handleCreateTask(
     return;
   }
 
+  const creatorId = req.user!.id;
+
+  const { data: members, error: membersError } = await supabase
+    .from('group_members')
+    .select('profile_id')
+    .eq('group_id', groupId);
+
+  if (membersError) {
+    logger.error({ err: membersError, groupId }, 'Nepavyko gauti grupės narių');
+    res.status(500).json({ error: 'Nepavyko gauti grupės narių' });
+    return;
+  }
+
+  const candidates = (members ?? [])
+    .map((m) => m.profile_id)
+    .filter((id) => id !== creatorId);
+
+  const assignedTo =
+    candidates.length === 0
+      ? creatorId
+      : candidates[Math.floor(Math.random() * candidates.length)];
+
   const { data, error } = await supabase
     .from('quests')
     .insert({
@@ -43,10 +66,12 @@ export async function handleCreateTask(
       description: description.trim(),
       difficulty_score: bettingIndex,
       group_id: groupId,
-      creator_id: req.user!.id,
+      creator_id: creatorId,
+      assigned_to: assignedTo,
       status: 'open',
+      initial_image_url: photoUrl?.trim() || null,
     })
-    .select('id')
+    .select('id, assigned_to, initial_image_url')
     .single();
 
   if (error) {
@@ -55,9 +80,16 @@ export async function handleCreateTask(
     return;
   }
 
-  logger.info({ taskId: data.id, userId: req.user!.id }, 'Užduotis sukurta');
+  logger.info(
+    { taskId: data.id, userId: creatorId, assignedTo: data.assigned_to },
+    'Užduotis sukurta',
+  );
 
-  res.status(201).json({ id: data.id });
+  res.status(201).json({
+    id: data.id,
+    assignedTo: data.assigned_to,
+    initialImageUrl: data.initial_image_url,
+  });
 }
 
 export async function handleGetTaskById(
@@ -157,6 +189,105 @@ export async function handleGetTaskById(
       againstCount,
     },
   });
+}
+
+interface AssignTaskBody {
+  assignedTo: string;
+}
+
+export async function handleAssignTask(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const { taskId } = req.params;
+  const { assignedTo } = req.body as AssignTaskBody;
+  const userId = req.user!.id;
+
+  if (!taskId) {
+    res.status(400).json({ error: 'Trūksta taskId parametro' });
+    return;
+  }
+
+  if (!assignedTo || typeof assignedTo !== 'string' || !assignedTo.trim()) {
+    res.status(400).json({ error: 'assignedTo yra privalomas' });
+    return;
+  }
+
+  const { data: quest, error: questError } = await supabase
+    .from('quests')
+    .select('id, group_id, creator_id, status')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (questError) {
+    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį priskyrimui');
+    res.status(500).json({ error: 'Nepavyko gauti užduoties' });
+    return;
+  }
+
+  if (!quest) {
+    res.status(404).json({ error: 'Užduotis nerasta' });
+    return;
+  }
+
+  if (quest.status !== 'open') {
+    res.status(400).json({ error: 'Galima priskirti tik atviras užduotis' });
+    return;
+  }
+
+  const isCreator = quest.creator_id === userId;
+
+  if (!isCreator) {
+    const { data: requesterMembership, error: requesterError } = await supabase
+      .from('group_members')
+      .select('role')
+      .eq('group_id', quest.group_id)
+      .eq('profile_id', userId)
+      .maybeSingle();
+
+    if (requesterError) {
+      logger.error({ err: requesterError, taskId, userId }, 'Klaida tikrinant narystę');
+      res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
+      return;
+    }
+
+    if (!requesterMembership || requesterMembership.role !== 'admin') {
+      res.status(403).json({ error: 'Neturite teisės priskirti šios užduoties' });
+      return;
+    }
+  }
+
+  const { data: assigneeMembership, error: assigneeError } = await supabase
+    .from('group_members')
+    .select('profile_id')
+    .eq('group_id', quest.group_id)
+    .eq('profile_id', assignedTo)
+    .maybeSingle();
+
+  if (assigneeError) {
+    logger.error({ err: assigneeError, taskId, assignedTo }, 'Klaida tikrinant priskyriamą narį');
+    res.status(500).json({ error: 'Nepavyko patikrinti priskyriamo nario' });
+    return;
+  }
+
+  if (!assigneeMembership) {
+    res.status(400).json({ error: 'Priskiriamas vartotojas nėra šios grupės narys' });
+    return;
+  }
+
+  const { error: updateError } = await supabase
+    .from('quests')
+    .update({ assigned_to: assignedTo })
+    .eq('id', taskId);
+
+  if (updateError) {
+    logger.error({ err: updateError, taskId, assignedTo }, 'Nepavyko priskirti užduoties');
+    res.status(500).json({ error: 'Nepavyko priskirti užduoties' });
+    return;
+  }
+
+  logger.info({ taskId, assignedTo, userId }, 'Užduotis priskirta nariui');
+  res.status(200).json({ id: taskId, assignedTo });
 }
 
 interface ResolveTaskBody {
