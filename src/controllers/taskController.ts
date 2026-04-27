@@ -1,6 +1,9 @@
+import crypto from 'crypto';
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
+import { uploadToStorage } from '../services/storage';
+import { evaluateEvidence } from '../services/evidenceVerdict';
 import logger from '../lib/logger';
 
 interface CreateTaskBody {
@@ -290,6 +293,152 @@ export async function handleAssignTask(
   res.status(200).json({ id: taskId, assignedTo });
 }
 
+export async function handleSubmitEvidence(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const { taskId } = req.params;
+  const userId = req.user!.id;
+
+  if (!taskId) {
+    res.status(400).json({ error: 'Trūksta taskId parametro' });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ error: 'Įrodymo nuotrauka yra privaloma' });
+    return;
+  }
+
+  const { data: quest, error: questError } = await supabase
+    .from('quests')
+    .select('id, title, description, status, assigned_to, initial_image_url')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (questError) {
+    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį įrodymui');
+    res.status(500).json({ error: 'Nepavyko gauti užduoties' });
+    return;
+  }
+
+  if (!quest) {
+    res.status(404).json({ error: 'Užduotis nerasta' });
+    return;
+  }
+
+  if (quest.assigned_to !== userId) {
+    res.status(403).json({ error: 'Įrodymą gali įkelti tik priskirtas vykdytojas' });
+    return;
+  }
+
+  if (quest.status !== 'open') {
+    res.status(409).json({ error: 'Užduotis jau išspręsta' });
+    return;
+  }
+
+  if (!quest.initial_image_url) {
+    res.status(422).json({
+      error: 'Užduotis neturi pradinės nuotraukos — įrodymo automatinis vertinimas neįmanomas',
+    });
+    return;
+  }
+
+  const uploadId = crypto.randomUUID();
+  const evidenceImageUrl = await uploadToStorage(req.file.buffer, req.file.mimetype, uploadId);
+
+  if (!evidenceImageUrl) {
+    res.status(500).json({ error: 'Nepavyko įkelti įrodymo nuotraukos' });
+    return;
+  }
+
+  const { error: evidenceUpdateError } = await supabase
+    .from('quests')
+    .update({ evidence_image_url: evidenceImageUrl })
+    .eq('id', taskId);
+
+  if (evidenceUpdateError) {
+    logger.error(
+      { err: evidenceUpdateError, taskId },
+      'Nepavyko išsaugoti evidence_image_url',
+    );
+    res.status(500).json({ error: 'Nepavyko išsaugoti įrodymo nuotraukos' });
+    return;
+  }
+
+  let verdictResult: Awaited<ReturnType<typeof evaluateEvidence>>;
+  try {
+    verdictResult = await evaluateEvidence({
+      initialImageUrl: quest.initial_image_url,
+      evidenceImageUrl,
+      taskTitle: quest.title,
+      taskDescription: quest.description,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Nežinoma klaida';
+    logger.error({ err, taskId }, 'AI verdict klaida');
+    res.status(502).json({
+      verdict: 'unclear',
+      reason: message === 'AI_TIMEOUT' ? 'AI analizė užtruko per ilgai' : 'Nepavyko gauti AI verdikto',
+      status: 'open',
+    });
+    return;
+  }
+
+  if (verdictResult.verdict === 'approved') {
+    const { error: rpcError } = await supabase.rpc('resolve_quest', {
+      p_quest_id: taskId,
+      p_resolution_is_positive: true,
+    });
+
+    if (rpcError) {
+      logger.error({ err: rpcError, taskId }, 'AI patvirtino, bet resolve_quest nepavyko');
+      res.status(500).json({ error: 'Nepavyko užbaigti užduoties' });
+      return;
+    }
+
+    await supabase
+      .from('quests')
+      .update({ ai_verdict_reason: verdictResult.reason })
+      .eq('id', taskId);
+
+    logger.info({ taskId, userId }, 'Įrodymas patvirtintas, užduotis užbaigta');
+    res.status(200).json({
+      verdict: 'approved',
+      reason: verdictResult.reason,
+      status: 'completed',
+    });
+    return;
+  }
+
+  if (verdictResult.verdict === 'rejected') {
+    await supabase
+      .from('quests')
+      .update({ ai_verdict_reason: verdictResult.reason })
+      .eq('id', taskId);
+
+    logger.info({ taskId, userId }, 'Įrodymas atmestas, užduotis lieka atvira');
+    res.status(200).json({
+      verdict: 'rejected',
+      reason: verdictResult.reason,
+      status: 'open',
+    });
+    return;
+  }
+
+  await supabase
+    .from('quests')
+    .update({ ai_verdict_reason: verdictResult.reason })
+    .eq('id', taskId);
+
+  logger.info({ taskId, userId }, 'Įrodymo vertinimas neaiškus');
+  res.status(502).json({
+    verdict: 'unclear',
+    reason: verdictResult.reason,
+    status: 'open',
+  });
+}
+
 interface ResolveTaskBody {
   resolution_is_positive: boolean;
 }
@@ -300,6 +449,7 @@ export async function handleResolveTask(
 ): Promise<void> {
   const { taskId } = req.params;
   const { resolution_is_positive } = req.body as ResolveTaskBody;
+  const userId = req.user!.id;
 
   if (!taskId) {
     res.status(400).json({ error: 'Trūksta taskId parametro' });
@@ -309,6 +459,43 @@ export async function handleResolveTask(
   if (typeof resolution_is_positive !== 'boolean') {
     res.status(400).json({ error: 'resolution_is_positive turi būti boolean reikšmė' });
     return;
+  }
+
+  const { data: quest, error: questError } = await supabase
+    .from('quests')
+    .select('id, group_id, creator_id')
+    .eq('id', taskId)
+    .maybeSingle();
+
+  if (questError) {
+    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį sprendimui');
+    res.status(500).json({ error: 'Nepavyko gauti užduoties' });
+    return;
+  }
+
+  if (!quest) {
+    res.status(404).json({ error: 'Užduotis nerasta' });
+    return;
+  }
+
+  if (quest.creator_id !== userId) {
+    const { data: membership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('role')
+      .eq('group_id', quest.group_id)
+      .eq('profile_id', userId)
+      .maybeSingle();
+
+    if (membershipError) {
+      logger.error({ err: membershipError, taskId, userId }, 'Klaida tikrinant narystę sprendimui');
+      res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
+      return;
+    }
+
+    if (!membership || membership.role !== 'admin') {
+      res.status(403).json({ error: 'Neturite teisės spręsti šios užduoties' });
+      return;
+    }
   }
 
   try {
