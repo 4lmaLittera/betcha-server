@@ -10,10 +10,18 @@ on:
       - dev
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -26,7 +34,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Lint
         run: npm run lint
@@ -35,4 +46,4 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm test -- --ci --coverage --forceExit
+        run: npm test -- --ci --runInBand --coverage --forceExit
