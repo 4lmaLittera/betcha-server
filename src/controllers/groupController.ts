@@ -167,6 +167,159 @@ export async function handleGetMyGroups(
   res.status(200).json(groups);
 }
 
+export async function handleGetGroupStats(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const { id: groupId } = req.params;
+  const userId = req.user!.id;
+
+  if (!groupId) {
+    res.status(400).json({ error: 'Trūksta grupės ID' });
+    return;
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('group_members')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('profile_id', userId)
+    .maybeSingle();
+
+  if (membershipError) {
+    logger.error(
+      { err: membershipError, groupId, userId },
+      'Klaida tikrinant narystę',
+    );
+    res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
+    return;
+  }
+
+  if (!membership) {
+    res.status(403).json({ error: 'Neturite prieigos prie šios grupės' });
+    return;
+  }
+
+  const { data: openQuestRows, error: openError } = await supabase
+    .from('quests')
+    .select(
+      'id, title, status, difficulty_score, created_at, assigned:profiles!quests_assigned_to_fkey(id, username)',
+    )
+    .eq('group_id', groupId)
+    .eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (openError) {
+    logger.error({ err: openError, groupId }, 'Nepavyko gauti atvirų užduočių');
+    res.status(500).json({ error: 'Nepavyko gauti grupės statistikos' });
+    return;
+  }
+
+  const { data: resolvedQuestRows, error: resolvedError } = await supabase
+    .from('quests')
+    .select('id, title, status, completed_at')
+    .eq('group_id', groupId)
+    .in('status', ['completed', 'rejected'])
+    .order('completed_at', { ascending: false })
+    .limit(3);
+
+  if (resolvedError) {
+    logger.error(
+      { err: resolvedError, groupId },
+      'Nepavyko gauti užbaigtų užduočių',
+    );
+    res.status(500).json({ error: 'Nepavyko gauti grupės statistikos' });
+    return;
+  }
+
+  const { count: openCount, error: countError } = await supabase
+    .from('quests')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', groupId)
+    .eq('status', 'open');
+
+  if (countError) {
+    logger.error(
+      { err: countError, groupId },
+      'Nepavyko suskaičiuoti atvirų užduočių',
+    );
+    res.status(500).json({ error: 'Nepavyko gauti grupės statistikos' });
+    return;
+  }
+
+  type AssignedProfile = { id: string; username: string };
+  type OpenQuestRow = {
+    id: string;
+    title: string;
+    status: string;
+    difficulty_score: number;
+    created_at: string;
+    assigned: AssignedProfile | AssignedProfile[] | null;
+  };
+  type ResolvedQuestRow = {
+    id: string;
+    title: string;
+    status: string;
+    completed_at: string | null;
+  };
+  type BetAmountRow = { amount: number | null };
+
+  const typedOpenQuests = (openQuestRows ?? []) as unknown as OpenQuestRow[];
+  const typedResolvedQuests = (resolvedQuestRows ??
+    []) as unknown as ResolvedQuestRow[];
+
+  const openIds = typedOpenQuests.map((q) => q.id);
+  let totalPrizePool = 0;
+
+  if (openIds.length > 0) {
+    const { data: bets, error: betsError } = await supabase
+      .from('bets')
+      .select('amount')
+      .in('quest_id', openIds)
+      .eq('status', 'pending');
+
+    if (betsError) {
+      logger.error({ err: betsError, groupId }, 'Nepavyko gauti lažybų sumos');
+      res.status(500).json({ error: 'Nepavyko gauti grupės statistikos' });
+      return;
+    }
+
+    totalPrizePool = ((bets ?? []) as BetAmountRow[]).reduce(
+      (sum, b) => sum + (b.amount ?? 0),
+      0,
+    );
+  }
+
+  const openQuests = typedOpenQuests.map((q) => {
+    const assigned = Array.isArray(q.assigned) ? q.assigned[0] : q.assigned;
+    return {
+      id: q.id,
+      title: q.title,
+      status: q.status,
+      difficultyScore: q.difficulty_score,
+      assignedTo: assigned
+        ? { id: assigned.id, username: assigned.username }
+        : null,
+      createdAt: q.created_at,
+    };
+  });
+
+  const recentResolved = typedResolvedQuests.map((q) => ({
+    id: q.id,
+    title: q.title,
+    status: q.status,
+    completedAt: q.completed_at,
+  }));
+
+  res.status(200).json({
+    openQuests,
+    openCount: openCount ?? 0,
+    recentResolved,
+    totalPrizePool,
+  });
+}
+
 export async function handleGetGroupMembers(
   req: AuthenticatedRequest,
   res: Response,
