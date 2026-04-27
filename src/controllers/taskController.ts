@@ -36,6 +36,28 @@ export async function handleCreateTask(
     return;
   }
 
+  const creatorId = req.user!.id;
+
+  const { data: members, error: membersError } = await supabase
+    .from('group_members')
+    .select('profile_id')
+    .eq('group_id', groupId);
+
+  if (membersError) {
+    logger.error({ err: membersError, groupId }, 'Nepavyko gauti grupės narių');
+    res.status(500).json({ error: 'Nepavyko gauti grupės narių' });
+    return;
+  }
+
+  const candidates = (members ?? [])
+    .map((m) => m.profile_id)
+    .filter((id) => id !== creatorId);
+
+  const assignedTo =
+    candidates.length === 0
+      ? creatorId
+      : candidates[Math.floor(Math.random() * candidates.length)];
+
   const { data, error } = await supabase
     .from('quests')
     .insert({
@@ -43,10 +65,11 @@ export async function handleCreateTask(
       description: description.trim(),
       difficulty_score: bettingIndex,
       group_id: groupId,
-      creator_id: req.user!.id,
+      creator_id: creatorId,
+      assigned_to: assignedTo,
       status: 'open',
     })
-    .select('id')
+    .select('id, assigned_to')
     .single();
 
   if (error) {
@@ -55,9 +78,12 @@ export async function handleCreateTask(
     return;
   }
 
-  logger.info({ taskId: data.id, userId: req.user!.id }, 'Užduotis sukurta');
+  logger.info(
+    { taskId: data.id, userId: creatorId, assignedTo: data.assigned_to },
+    'Užduotis sukurta',
+  );
 
-  res.status(201).json({ id: data.id });
+  res.status(201).json({ id: data.id, assignedTo: data.assigned_to });
 }
 
 export async function handleGetTaskById(

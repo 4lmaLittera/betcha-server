@@ -10,6 +10,7 @@ const mockSelect = jest.fn();
 const mockSingle = jest.fn();
 const mockQuestMaybeSingle = jest.fn();
 const mockBetsResult = jest.fn();
+const mockGroupMembersSelect = jest.fn();
 
 jest.mock('../lib/supabase', () => ({
   supabase: {
@@ -46,6 +47,13 @@ jest.mock('../lib/supabase', () => ({
           }),
         };
       }
+      if (table === 'group_members') {
+        return {
+          select: () => ({
+            eq: () => mockGroupMembersSelect(),
+          }),
+        };
+      }
       return {
         select: jest.fn().mockReturnValue({
           limit: jest.fn().mockResolvedValue({ data: [], error: null }),
@@ -64,7 +72,14 @@ import app from '../app';
 describe('POST /api/tasks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSingle.mockResolvedValue({ data: { id: 'task-123' }, error: null });
+    mockGroupMembersSelect.mockResolvedValue({
+      data: [{ profile_id: 'test-user-id' }],
+      error: null,
+    });
+    mockSingle.mockResolvedValue({
+      data: { id: 'task-123', assigned_to: 'test-user-id' },
+      error: null,
+    });
   });
 
   const validBody = {
@@ -74,14 +89,14 @@ describe('POST /api/tasks', () => {
     groupId: 'group-abc',
   };
 
-  it('turėtų sukurti užduotį ir grąžinti ID', async () => {
+  it('turėtų sukurti užduotį ir grąžinti ID su assignedTo', async () => {
     const response = await request(app)
       .post('/api/tasks')
       .set('Authorization', 'Bearer valid-token')
       .send(validBody);
 
     expect(response.status).toBe(201);
-    expect(response.body).toEqual({ id: 'task-123' });
+    expect(response.body).toEqual({ id: 'task-123', assignedTo: 'test-user-id' });
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Netvarkinga virtuvė',
@@ -89,8 +104,76 @@ describe('POST /api/tasks', () => {
         difficulty_score: 7,
         group_id: 'group-abc',
         creator_id: 'test-user-id',
+        assigned_to: 'test-user-id',
       }),
     );
+  });
+
+  it('turėtų automatiškai priskirti atsitiktiniam ne-creator nariui', async () => {
+    mockGroupMembersSelect.mockResolvedValue({
+      data: [
+        { profile_id: 'test-user-id' },
+        { profile_id: 'member-1' },
+        { profile_id: 'member-2' },
+      ],
+      error: null,
+    });
+    mockSingle.mockResolvedValue({
+      data: { id: 'task-123', assigned_to: 'member-1' },
+      error: null,
+    });
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+
+    const response = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', 'Bearer valid-token')
+      .send(validBody);
+
+    expect(response.status).toBe(201);
+    expect(response.body.assignedTo).toBe('member-1');
+    const insertArg = mockInsert.mock.calls[0][0] as { assigned_to: string };
+    expect(['member-1', 'member-2']).toContain(insertArg.assigned_to);
+    expect(insertArg.assigned_to).not.toBe('test-user-id');
+
+    randomSpy.mockRestore();
+  });
+
+  it('turėtų priskirti creator kai jis yra vienintelis grupės narys', async () => {
+    mockGroupMembersSelect.mockResolvedValue({
+      data: [{ profile_id: 'test-user-id' }],
+      error: null,
+    });
+    mockSingle.mockResolvedValue({
+      data: { id: 'task-123', assigned_to: 'test-user-id' },
+      error: null,
+    });
+
+    const response = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', 'Bearer valid-token')
+      .send(validBody);
+
+    expect(response.status).toBe(201);
+    expect(response.body.assignedTo).toBe('test-user-id');
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ assigned_to: 'test-user-id' }),
+    );
+  });
+
+  it('turėtų grąžinti 500 kai narių užklausa nepavyksta', async () => {
+    mockGroupMembersSelect.mockResolvedValue({
+      data: null,
+      error: { message: 'DB error' },
+    });
+
+    const response = await request(app)
+      .post('/api/tasks')
+      .set('Authorization', 'Bearer valid-token')
+      .send(validBody);
+
+    expect(response.status).toBe(500);
+    expect(response.body.error).toContain('grupės narių');
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 
   it('turėtų atmesti kai trūksta pavadinimo', async () => {
