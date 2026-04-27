@@ -125,6 +125,8 @@ describe('analyzePhoto', () => {
     abortError.name = 'AbortError';
     mockCreate.mockRejectedValue(abortError);
 
-    await expect(analyzePhoto(fakeBuffer, 'image/jpeg')).rejects.toThrow('AI_TIMEOUT');
+    await expect(analyzePhoto(fakeBuffer, 'image/jpeg')).rejects.toThrow(
+      'AI_TIMEOUT',
+    );
   });
 });

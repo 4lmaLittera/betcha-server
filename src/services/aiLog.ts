@@ -15,6 +15,9 @@ export async function logAiRequest(entry: AiLogEntry): Promise<void> {
   });
 
   if (error) {
-    logger.error({ err: error, uploadId: entry.uploadId }, 'Nepavyko įrašyti ai_log');
+    logger.error(
+      { err: error, uploadId: entry.uploadId },
+      'Nepavyko įrašyti ai_log',
+    );
   }
 }

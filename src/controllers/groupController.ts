@@ -49,7 +49,10 @@ export async function handleCreateGroup(
   });
 
   if (memberError) {
-    logger.error({ err: memberError, groupId: group.id, userId }, 'Nepavyko pridėti kūrėjo kaip nario');
+    logger.error(
+      { err: memberError, groupId: group.id, userId },
+      'Nepavyko pridėti kūrėjo kaip nario',
+    );
     res.status(500).json({ error: 'Nepavyko pridėti kūrėjo kaip nario' });
     return;
   }
@@ -97,12 +100,18 @@ export async function handleJoinGroup(
       res.status(409).json({ error: 'Jau esate šios grupės narys' });
       return;
     }
-    logger.error({ err: memberError, groupId: group.id, userId }, 'Nepavyko prisijungti prie grupės');
+    logger.error(
+      { err: memberError, groupId: group.id, userId },
+      'Nepavyko prisijungti prie grupės',
+    );
     res.status(500).json({ error: 'Nepavyko prisijungti prie grupės' });
     return;
   }
 
-  logger.info({ groupId: group.id, userId }, 'Vartotojas prisijungė prie grupės');
+  logger.info(
+    { groupId: group.id, userId },
+    'Vartotojas prisijungė prie grupės',
+  );
   res.status(200).json({ groupId: group.id, name: group.name });
 }
 
@@ -123,7 +132,16 @@ export async function handleGetMyGroups(
     return;
   }
 
-  const groupIds = memberships.map((m: any) => (m.groups as any).id);
+  type GroupRow = {
+    id: string;
+    name: string;
+    invite_code: string;
+    created_by_id: string;
+  };
+  type MembershipWithGroup = { role: string; groups: GroupRow };
+  const typedMemberships = memberships as unknown as MembershipWithGroup[];
+
+  const groupIds = typedMemberships.map((m) => m.groups.id);
 
   const { data: counts, error: countError } = await supabase
     .from('group_members')
@@ -137,13 +155,13 @@ export async function handleGetMyGroups(
     }
   }
 
-  const groups = memberships.map((m: any) => ({
-    id: (m.groups as any).id,
-    name: (m.groups as any).name,
-    inviteCode: (m.groups as any).invite_code,
-    createdById: (m.groups as any).created_by_id,
+  const groups = typedMemberships.map((m) => ({
+    id: m.groups.id,
+    name: m.groups.name,
+    inviteCode: m.groups.invite_code,
+    createdById: m.groups.created_by_id,
     role: m.role,
-    memberCount: memberCounts[(m.groups as any).id] || 0,
+    memberCount: memberCounts[m.groups.id] || 0,
   }));
 
   res.status(200).json(groups);
@@ -194,10 +212,17 @@ export async function handleGetGroupMembers(
     id: group.id,
     name: group.name,
     inviteCode: group.invite_code,
-    members: members.map((m: any) => ({
+    members: (
+      members as unknown as Array<{
+        profile_id: string;
+        role: string;
+        joined_at: string;
+        profiles: { username: string; avatar_url: string } | null;
+      }>
+    ).map((m) => ({
       profileId: m.profile_id,
-      username: (m.profiles as any)?.username ?? null,
-      avatarUrl: (m.profiles as any)?.avatar_url ?? null,
+      username: m.profiles?.username ?? null,
+      avatarUrl: m.profiles?.avatar_url ?? null,
       role: m.role,
       joinedAt: m.joined_at,
     })),

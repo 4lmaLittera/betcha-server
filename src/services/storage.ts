@@ -19,7 +19,10 @@ export async function uploadToStorage(
     });
 
   if (error) {
-    logger.error({ err: error, uploadId }, 'Nepavyko įkelti nuotraukos į Storage');
+    logger.error(
+      { err: error, uploadId },
+      'Nepavyko įkelti nuotraukos į Storage',
+    );
     return null;
   }
 

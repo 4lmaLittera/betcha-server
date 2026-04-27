@@ -14,7 +14,8 @@ export async function handleCreateTask(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const { title, description, bettingIndex, groupId } = req.body as CreateTaskBody;
+  const { title, description, bettingIndex, groupId } =
+    req.body as CreateTaskBody;
 
   if (!title || !title.trim()) {
     res.status(400).json({ error: 'Pavadinimas yra privalomas' });
@@ -73,7 +74,8 @@ export async function handleGetTaskById(
 
   const { data: quest, error: questError } = await supabase
     .from('quests')
-    .select(`
+    .select(
+      `
       id,
       group_id,
       title,
@@ -95,7 +97,8 @@ export async function handleGetTaskById(
         username,
         avatar_url
       )
-    `)
+    `,
+    )
     .eq('id', taskId)
     .maybeSingle();
 
@@ -116,7 +119,10 @@ export async function handleGetTaskById(
     .eq('quest_id', taskId);
 
   if (betsError) {
-    logger.error({ err: betsError, taskId }, 'Klaida gaunant lažybų agregaciją');
+    logger.error(
+      { err: betsError, taskId },
+      'Klaida gaunant lažybų agregaciją',
+    );
     res.status(500).json({ error: 'Nepavyko gauti lažybų duomenų' });
     return;
   }
@@ -134,8 +140,12 @@ export async function handleGetTaskById(
     }
   });
 
-  const creator = Array.isArray(quest.creator) ? quest.creator[0] : quest.creator;
-  const assigned = Array.isArray(quest.assigned) ? quest.assigned[0] : quest.assigned;
+  const creator = Array.isArray(quest.creator)
+    ? quest.creator[0]
+    : quest.creator;
+  const assigned = Array.isArray(quest.assigned)
+    ? quest.assigned[0]
+    : quest.assigned;
 
   res.status(200).json({
     id: quest.id,
@@ -176,7 +186,9 @@ export async function handleResolveTask(
   }
 
   if (typeof resolution_is_positive !== 'boolean') {
-    res.status(400).json({ error: 'resolution_is_positive turi būti boolean reikšmė' });
+    res
+      .status(400)
+      .json({ error: 'resolution_is_positive turi būti boolean reikšmė' });
     return;
   }
 
@@ -203,7 +215,10 @@ export async function handleResolveTask(
       return;
     }
 
-    logger.info({ taskId, resolution: resolution_is_positive }, 'Užduotis sėkmingai išspręsta ir taškai perskirstyti');
+    logger.info(
+      { taskId, resolution: resolution_is_positive },
+      'Užduotis sėkmingai išspręsta ir taškai perskirstyti',
+    );
     res.status(200).json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Nežinoma klaida';

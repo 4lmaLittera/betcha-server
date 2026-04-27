@@ -205,7 +205,11 @@ describe('GET /api/tasks/:taskId', () => {
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(200);
-    expect(response.body.bets).toEqual({ totalPool: 0, forCount: 0, againstCount: 0 });
+    expect(response.body.bets).toEqual({
+      totalPool: 0,
+      forCount: 0,
+      againstCount: 0,
+    });
   });
 
   it('turėtų grąžinti assignedTo null kai užduotis nepriskirta', async () => {

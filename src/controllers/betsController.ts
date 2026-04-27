@@ -25,7 +25,9 @@ export async function placeBet(
 
   // Įvesties validacija
   if (!questId || !direction || !amount || !coefficient) {
-    res.status(400).json({ error: 'Trūksta privalomų laukų: questId, direction, amount, coefficient' });
+    res.status(400).json({
+      error: 'Trūksta privalomų laukų: questId, direction, amount, coefficient',
+    });
     return;
   }
 
@@ -35,17 +37,19 @@ export async function placeBet(
   }
 
   if (!Number.isInteger(amount) || amount <= 0) {
-    res.status(400).json({ error: 'amount turi būti teigiamas sveikasis skaičius' });
+    res
+      .status(400)
+      .json({ error: 'amount turi būti teigiamas sveikasis skaičius' });
     return;
   }
 
   try {
     // Atominis statymas per Postgres funkciją (patikrina balansą + sukuria lažybą)
     const { data, error } = await supabase.rpc('place_bet', {
-      p_profile_id:  userId,
-      p_quest_id:    questId,
-      p_amount:      amount,
-      p_direction:   direction === 'for',
+      p_profile_id: userId,
+      p_quest_id: questId,
+      p_amount: amount,
+      p_direction: direction === 'for',
       p_coefficient: coefficient,
     });
 
@@ -68,7 +72,10 @@ export async function placeBet(
       return;
     }
 
-    logger.info({ userId, questId, amount, direction }, 'Statymas sėkmingai sukurtas');
+    logger.info(
+      { userId, questId, amount, direction },
+      'Statymas sėkmingai sukurtas',
+    );
     res.status(200).json({ bet: data });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Nežinoma klaida';
@@ -91,7 +98,8 @@ export async function getQuestBets(
   try {
     const { data: bets, error } = await supabase
       .from('bets')
-      .select(`
+      .select(
+        `
         id,
         amount,
         prediction_is_positive,
@@ -101,7 +109,8 @@ export async function getQuestBets(
           username,
           avatar_url
         )
-      `)
+      `,
+      )
       .eq('quest_id', questId);
 
     if (error) {
@@ -110,9 +119,15 @@ export async function getQuestBets(
       return;
     }
 
+    type BetInfo = {
+      id: string;
+      amount: number;
+      createdAt: string;
+      profile: unknown;
+    };
     let totalPool = 0;
-    const forBets: any[] = [];
-    const againstBets: any[] = [];
+    const forBets: BetInfo[] = [];
+    const againstBets: BetInfo[] = [];
 
     bets?.forEach((bet) => {
       totalPool += bet.amount;

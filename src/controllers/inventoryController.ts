@@ -3,14 +3,18 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 import logger from '../lib/logger';
 
-export const getInventory = async (req: AuthenticatedRequest, res: Response) => {
+export const getInventory = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ error: 'Neidentifikuotas' });
 
   try {
     const { data, error } = await supabase
       .from('user_inventory')
-      .select(`
+      .select(
+        `
         id,
         is_used,
         purchased_at,
@@ -19,7 +23,8 @@ export const getInventory = async (req: AuthenticatedRequest, res: Response) => 
           name,
           description
         )
-      `)
+      `,
+      )
       .eq('profile_id', userId)
       .eq('is_used', false)
       .order('purchased_at', { ascending: false });
