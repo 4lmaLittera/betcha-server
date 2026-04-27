@@ -20,7 +20,11 @@ export async function handleAnalyze(
   try {
     const result = await analyzePhoto(req.file.buffer, req.file.mimetype);
 
-    const photoUrl = await uploadToStorage(req.file.buffer, req.file.mimetype, uploadId);
+    const photoUrl = await uploadToStorage(
+      req.file.buffer,
+      req.file.mimetype,
+      uploadId,
+    );
 
     await logAiRequest({ uploadId, status: 'success' });
 
@@ -45,7 +49,8 @@ export async function handleAnalyze(
     if (isTimeout) {
       res.status(408).json({
         error: 'AI_TIMEOUT',
-        message: 'DI analizė užtruko per ilgai. Galite suvesti duomenis rankiniu būdu.',
+        message:
+          'DI analizė užtruko per ilgai. Galite suvesti duomenis rankiniu būdu.',
         uploadId,
       });
       return;

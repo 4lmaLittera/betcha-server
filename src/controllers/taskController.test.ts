@@ -119,7 +119,8 @@ describe('POST /api/tasks', () => {
   });
 
   it('turėtų išsaugoti photoUrl į initial_image_url ir grąžinti atsakyme', async () => {
-    const photoUrl = 'https://example.supabase.co/storage/v1/object/public/photos/abc.jpg';
+    const photoUrl =
+      'https://example.supabase.co/storage/v1/object/public/photos/abc.jpg';
     mockSingle.mockResolvedValue({
       data: {
         id: 'task-123',
@@ -320,7 +321,11 @@ describe('GET /api/tasks/:taskId', () => {
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(200);
-    expect(response.body.bets).toEqual({ totalPool: 0, forCount: 0, againstCount: 0 });
+    expect(response.body.bets).toEqual({
+      totalPool: 0,
+      forCount: 0,
+      againstCount: 0,
+    });
   });
 
   it('turėtų grąžinti assignedTo null kai užduotis nepriskirta', async () => {

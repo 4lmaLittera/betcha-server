@@ -70,7 +70,7 @@ export async function analyzePhoto(
     }
   } catch (err) {
     if (controller.signal.aborted) {
-      throw new Error('AI_TIMEOUT');
+      throw new Error('AI_TIMEOUT', { cause: err });
     }
     throw err;
   } finally {
@@ -83,7 +83,12 @@ export async function analyzePhoto(
 
   const parsed = JSON.parse(content) as AnalysisResult;
 
-  if (!parsed.verdict || !parsed.title || !parsed.description || !parsed.bettingIndex) {
+  if (
+    !parsed.verdict ||
+    !parsed.title ||
+    !parsed.description ||
+    !parsed.bettingIndex
+  ) {
     throw new Error('OpenAI atsakyme trūksta privalomų laukų');
   }
 
@@ -92,7 +97,10 @@ export async function analyzePhoto(
   }
 
   if (parsed.bettingIndex < 1 || parsed.bettingIndex > 10) {
-    parsed.bettingIndex = Math.max(1, Math.min(10, Math.round(parsed.bettingIndex)));
+    parsed.bettingIndex = Math.max(
+      1,
+      Math.min(10, Math.round(parsed.bettingIndex)),
+    );
   }
 
   logger.info(

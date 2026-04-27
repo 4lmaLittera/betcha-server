@@ -168,7 +168,10 @@ describe('PATCH /api/tasks/:taskId/assign', () => {
 
   it('turėtų grąžinti 400 kai priskiriamas narys nėra grupėje', async () => {
     mockQuestMaybeSingle.mockResolvedValue({ data: openQuest, error: null });
-    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    mockMembershipMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: null,
+    });
 
     const response = await request(app)
       .patch('/api/tasks/quest-1/assign')
@@ -193,7 +196,10 @@ describe('PATCH /api/tasks/:taskId/assign', () => {
       data: { profile_id: 'assignee-id' },
       error: null,
     });
-    mockUpdateEq.mockResolvedValue({ data: null, error: { message: 'DB error' } });
+    mockUpdateEq.mockResolvedValue({
+      data: null,
+      error: { message: 'DB error' },
+    });
 
     const response = await request(app)
       .patch('/api/tasks/quest-1/assign')

@@ -24,10 +24,7 @@ app.use('/api/inventory', inventoryRouter);
 
 app.get('/health', async (_req, res) => {
   try {
-    const { error } = await supabase
-      .from('profiles')
-      .select('id')
-      .limit(1);
+    const { error } = await supabase.from('profiles').select('id').limit(1);
 
     if (error) {
       logger.error({ err: error }, 'Duomenų bazės ryšys nepasiekiamas');

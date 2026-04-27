@@ -9,7 +9,9 @@ export function handleMulterError(
 ): void {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      res.status(413).json({ error: 'Failas per didelis. Maksimalus dydis: 10MB.' });
+      res
+        .status(413)
+        .json({ error: 'Failas per didelis. Maksimalus dydis: 10MB.' });
       return;
     }
     res.status(400).json({ error: err.message });

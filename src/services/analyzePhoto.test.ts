@@ -51,7 +51,7 @@ describe('analyzePhoto', () => {
     expect(result.bettingIndex).toBe(7);
   });
 
-  it('turėtų surinkti atsakymą iš kelių chunk\'ų', async () => {
+  it("turėtų surinkti atsakymą iš kelių chunk'ų", async () => {
     const json = JSON.stringify({
       verdict: 'clean',
       title: 'Švaru',
@@ -82,7 +82,9 @@ describe('analyzePhoto', () => {
   });
 
   it('turėtų mesti klaidą kai trūksta laukų', async () => {
-    mockCreate.mockResolvedValue(streamFor(JSON.stringify({ verdict: 'mess' })));
+    mockCreate.mockResolvedValue(
+      streamFor(JSON.stringify({ verdict: 'mess' })),
+    );
 
     await expect(analyzePhoto(fakeBuffer, 'image/jpeg')).rejects.toThrow(
       'trūksta privalomų laukų',
@@ -129,27 +131,29 @@ describe('analyzePhoto', () => {
     );
   });
 
-  it('turėtų mesti AI_TIMEOUT kai pirmas chunk\'as neatsako per 20s', async () => {
+  it("turėtų mesti AI_TIMEOUT kai pirmas chunk'as neatsako per 20s", async () => {
     jest.useFakeTimers();
 
-    mockCreate.mockImplementation((_args: unknown, opts: { signal: AbortSignal }) => {
-      const signal = opts.signal;
-      return Promise.resolve({
-        [Symbol.asyncIterator]() {
-          return {
-            next() {
-              return new Promise((_resolve, reject) => {
-                signal.addEventListener('abort', () => {
-                  const err = new Error('Request was aborted.');
-                  err.name = 'APIUserAbortError';
-                  reject(err);
+    mockCreate.mockImplementation(
+      (_args: unknown, opts: { signal: AbortSignal }) => {
+        const signal = opts.signal;
+        return Promise.resolve({
+          [Symbol.asyncIterator]() {
+            return {
+              next() {
+                return new Promise((_resolve, reject) => {
+                  signal.addEventListener('abort', () => {
+                    const err = new Error('Request was aborted.');
+                    err.name = 'APIUserAbortError';
+                    reject(err);
+                  });
                 });
-              });
-            },
-          };
-        },
-      });
-    });
+              },
+            };
+          },
+        });
+      },
+    );
 
     const promise = analyzePhoto(fakeBuffer, 'image/jpeg');
     const expectation = expect(promise).rejects.toThrow('AI_TIMEOUT');
@@ -159,35 +163,37 @@ describe('analyzePhoto', () => {
     jest.useRealTimers();
   });
 
-  it('turėtų mesti AI_TIMEOUT kai stream\'as užstringa po pirmo chunk\'o (5s idle)', async () => {
+  it("turėtų mesti AI_TIMEOUT kai stream'as užstringa po pirmo chunk'o (5s idle)", async () => {
     jest.useFakeTimers();
 
-    mockCreate.mockImplementation((_args: unknown, opts: { signal: AbortSignal }) => {
-      const signal = opts.signal;
-      let yieldedFirst = false;
-      return Promise.resolve({
-        [Symbol.asyncIterator]() {
-          return {
-            next() {
-              if (!yieldedFirst) {
-                yieldedFirst = true;
-                return Promise.resolve({
-                  value: { choices: [{ delta: { content: '{' } }] },
-                  done: false,
+    mockCreate.mockImplementation(
+      (_args: unknown, opts: { signal: AbortSignal }) => {
+        const signal = opts.signal;
+        let yieldedFirst = false;
+        return Promise.resolve({
+          [Symbol.asyncIterator]() {
+            return {
+              next() {
+                if (!yieldedFirst) {
+                  yieldedFirst = true;
+                  return Promise.resolve({
+                    value: { choices: [{ delta: { content: '{' } }] },
+                    done: false,
+                  });
+                }
+                return new Promise((_resolve, reject) => {
+                  signal.addEventListener('abort', () => {
+                    const err = new Error('Request was aborted.');
+                    err.name = 'APIUserAbortError';
+                    reject(err);
+                  });
                 });
-              }
-              return new Promise((_resolve, reject) => {
-                signal.addEventListener('abort', () => {
-                  const err = new Error('Request was aborted.');
-                  err.name = 'APIUserAbortError';
-                  reject(err);
-                });
-              });
-            },
-          };
-        },
-      });
-    });
+              },
+            };
+          },
+        });
+      },
+    );
 
     const promise = analyzePhoto(fakeBuffer, 'image/jpeg');
     const expectation = expect(promise).rejects.toThrow('AI_TIMEOUT');

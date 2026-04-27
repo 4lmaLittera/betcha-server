@@ -49,7 +49,10 @@ export async function handleCreateGroup(
   });
 
   if (memberError) {
-    logger.error({ err: memberError, groupId: group.id, userId }, 'Nepavyko pridėti kūrėjo kaip nario');
+    logger.error(
+      { err: memberError, groupId: group.id, userId },
+      'Nepavyko pridėti kūrėjo kaip nario',
+    );
     res.status(500).json({ error: 'Nepavyko pridėti kūrėjo kaip nario' });
     return;
   }
@@ -97,12 +100,18 @@ export async function handleJoinGroup(
       res.status(409).json({ error: 'Jau esate šios grupės narys' });
       return;
     }
-    logger.error({ err: memberError, groupId: group.id, userId }, 'Nepavyko prisijungti prie grupės');
+    logger.error(
+      { err: memberError, groupId: group.id, userId },
+      'Nepavyko prisijungti prie grupės',
+    );
     res.status(500).json({ error: 'Nepavyko prisijungti prie grupės' });
     return;
   }
 
-  logger.info({ groupId: group.id, userId }, 'Vartotojas prisijungė prie grupės');
+  logger.info(
+    { groupId: group.id, userId },
+    'Vartotojas prisijungė prie grupės',
+  );
   res.status(200).json({ groupId: group.id, name: group.name });
 }
 
@@ -123,7 +132,16 @@ export async function handleGetMyGroups(
     return;
   }
 
-  const groupIds = memberships.map((m: any) => (m.groups as any).id);
+  type GroupRow = {
+    id: string;
+    name: string;
+    invite_code: string;
+    created_by_id: string;
+  };
+  type MembershipWithGroup = { role: string; groups: GroupRow };
+  const typedMemberships = memberships as unknown as MembershipWithGroup[];
+
+  const groupIds = typedMemberships.map((m) => m.groups.id);
 
   const { data: counts, error: countError } = await supabase
     .from('group_members')
@@ -137,13 +155,13 @@ export async function handleGetMyGroups(
     }
   }
 
-  const groups = memberships.map((m: any) => ({
-    id: (m.groups as any).id,
-    name: (m.groups as any).name,
-    inviteCode: (m.groups as any).invite_code,
-    createdById: (m.groups as any).created_by_id,
+  const groups = typedMemberships.map((m) => ({
+    id: m.groups.id,
+    name: m.groups.name,
+    inviteCode: m.groups.invite_code,
+    createdById: m.groups.created_by_id,
     role: m.role,
-    memberCount: memberCounts[(m.groups as any).id] || 0,
+    memberCount: memberCounts[m.groups.id] || 0,
   }));
 
   res.status(200).json(groups);
@@ -169,7 +187,10 @@ export async function handleGetGroupStats(
     .maybeSingle();
 
   if (membershipError) {
-    logger.error({ err: membershipError, groupId, userId }, 'Klaida tikrinant narystę');
+    logger.error(
+      { err: membershipError, groupId, userId },
+      'Klaida tikrinant narystę',
+    );
     res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
     return;
   }
@@ -204,7 +225,10 @@ export async function handleGetGroupStats(
     .limit(3);
 
   if (resolvedError) {
-    logger.error({ err: resolvedError, groupId }, 'Nepavyko gauti užbaigtų užduočių');
+    logger.error(
+      { err: resolvedError, groupId },
+      'Nepavyko gauti užbaigtų užduočių',
+    );
     res.status(500).json({ error: 'Nepavyko gauti grupės statistikos' });
     return;
   }
@@ -216,12 +240,36 @@ export async function handleGetGroupStats(
     .eq('status', 'open');
 
   if (countError) {
-    logger.error({ err: countError, groupId }, 'Nepavyko suskaičiuoti atvirų užduočių');
+    logger.error(
+      { err: countError, groupId },
+      'Nepavyko suskaičiuoti atvirų užduočių',
+    );
     res.status(500).json({ error: 'Nepavyko gauti grupės statistikos' });
     return;
   }
 
-  const openIds = (openQuestRows ?? []).map((q: any) => q.id);
+  type AssignedProfile = { id: string; username: string };
+  type OpenQuestRow = {
+    id: string;
+    title: string;
+    status: string;
+    difficulty_score: number;
+    created_at: string;
+    assigned: AssignedProfile | AssignedProfile[] | null;
+  };
+  type ResolvedQuestRow = {
+    id: string;
+    title: string;
+    status: string;
+    completed_at: string | null;
+  };
+  type BetAmountRow = { amount: number | null };
+
+  const typedOpenQuests = (openQuestRows ?? []) as unknown as OpenQuestRow[];
+  const typedResolvedQuests = (resolvedQuestRows ??
+    []) as unknown as ResolvedQuestRow[];
+
+  const openIds = typedOpenQuests.map((q) => q.id);
   let totalPrizePool = 0;
 
   if (openIds.length > 0) {
@@ -237,22 +285,27 @@ export async function handleGetGroupStats(
       return;
     }
 
-    totalPrizePool = (bets ?? []).reduce((sum: number, b: any) => sum + (b.amount ?? 0), 0);
+    totalPrizePool = ((bets ?? []) as BetAmountRow[]).reduce(
+      (sum, b) => sum + (b.amount ?? 0),
+      0,
+    );
   }
 
-  const openQuests = (openQuestRows ?? []).map((q: any) => {
+  const openQuests = typedOpenQuests.map((q) => {
     const assigned = Array.isArray(q.assigned) ? q.assigned[0] : q.assigned;
     return {
       id: q.id,
       title: q.title,
       status: q.status,
       difficultyScore: q.difficulty_score,
-      assignedTo: assigned ? { id: assigned.id, username: assigned.username } : null,
+      assignedTo: assigned
+        ? { id: assigned.id, username: assigned.username }
+        : null,
       createdAt: q.created_at,
     };
   });
 
-  const recentResolved = (resolvedQuestRows ?? []).map((q: any) => ({
+  const recentResolved = typedResolvedQuests.map((q) => ({
     id: q.id,
     title: q.title,
     status: q.status,
@@ -312,10 +365,17 @@ export async function handleGetGroupMembers(
     id: group.id,
     name: group.name,
     inviteCode: group.invite_code,
-    members: members.map((m: any) => ({
+    members: (
+      members as unknown as Array<{
+        profile_id: string;
+        role: string;
+        joined_at: string;
+        profiles: { username: string; avatar_url: string } | null;
+      }>
+    ).map((m) => ({
       profileId: m.profile_id,
-      username: (m.profiles as any)?.username ?? null,
-      avatarUrl: (m.profiles as any)?.avatar_url ?? null,
+      username: m.profiles?.username ?? null,
+      avatarUrl: m.profiles?.avatar_url ?? null,
       role: m.role,
       joinedAt: m.joined_at,
     })),

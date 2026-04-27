@@ -15,6 +15,11 @@ router.post('/', requireAuth, handleCreateTask);
 router.get('/:taskId', requireAuth, handleGetTaskById);
 router.patch('/:taskId/assign', requireAuth, handleAssignTask);
 router.post('/:taskId/resolve', requireAuth, handleResolveTask);
-router.post('/:taskId/evidence', requireAuth, upload.single('photo'), handleSubmitEvidence);
+router.post(
+  '/:taskId/evidence',
+  requireAuth,
+  upload.single('photo'),
+  handleSubmitEvidence,
+);
 
 export default router;

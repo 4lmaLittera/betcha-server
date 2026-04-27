@@ -35,13 +35,19 @@ describe('GroupController', () => {
 
   describe('POST /api/groups', () => {
     it('turėtų sukurti grupę ir grąžinti 201', async () => {
-      const mockGroup = { id: 'group-1', name: 'Test Group', invite_code: 'ABC123' };
+      const mockGroup = {
+        id: 'group-1',
+        name: 'Test Group',
+        invite_code: 'ABC123',
+      };
 
       (supabase.from as jest.Mock)
         .mockReturnValueOnce({
           insert: jest.fn().mockReturnValue({
             select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: mockGroup, error: null }),
+              single: jest
+                .fn()
+                .mockResolvedValue({ data: mockGroup, error: null }),
             }),
           }),
         })
@@ -86,7 +92,9 @@ describe('GroupController', () => {
         .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: mockGroup, error: null }),
+              single: jest
+                .fn()
+                .mockResolvedValue({ data: mockGroup, error: null }),
             }),
           }),
         })
@@ -107,7 +115,10 @@ describe('GroupController', () => {
       (supabase.from as jest.Mock).mockReturnValueOnce({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } }),
+            single: jest.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Not found' },
+            }),
           }),
         }),
       });
@@ -128,12 +139,16 @@ describe('GroupController', () => {
         .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: mockGroup, error: null }),
+              single: jest
+                .fn()
+                .mockResolvedValue({ data: mockGroup, error: null }),
             }),
           }),
         })
         .mockReturnValueOnce({
-          insert: jest.fn().mockResolvedValue({ error: { code: '23505', message: 'duplicate' } }),
+          insert: jest.fn().mockResolvedValue({
+            error: { code: '23505', message: 'duplicate' },
+          }),
         });
 
       const response = await request(app)
@@ -151,11 +166,21 @@ describe('GroupController', () => {
       const mockMemberships = [
         {
           role: 'admin',
-          groups: { id: 'group-1', name: 'Grupė 1', invite_code: 'ABC123', created_by_id: 'user-123' },
+          groups: {
+            id: 'group-1',
+            name: 'Grupė 1',
+            invite_code: 'ABC123',
+            created_by_id: 'user-123',
+          },
         },
         {
           role: 'member',
-          groups: { id: 'group-2', name: 'Grupė 2', invite_code: 'DEF456', created_by_id: 'user-456' },
+          groups: {
+            id: 'group-2',
+            name: 'Grupė 2',
+            invite_code: 'DEF456',
+            created_by_id: 'user-456',
+          },
         },
       ];
 
@@ -170,7 +195,9 @@ describe('GroupController', () => {
       (supabase.from as jest.Mock)
         .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ data: mockMemberships, error: null }),
+            eq: jest
+              .fn()
+              .mockResolvedValue({ data: mockMemberships, error: null }),
           }),
         })
         .mockReturnValueOnce({
@@ -213,7 +240,9 @@ describe('GroupController', () => {
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({ data: { id: 'member-1' }, error: null }),
+                single: jest
+                  .fn()
+                  .mockResolvedValue({ data: { id: 'member-1' }, error: null }),
               }),
             }),
           }),
@@ -249,7 +278,10 @@ describe('GroupController', () => {
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } }),
+              single: jest.fn().mockResolvedValue({
+                data: null,
+                error: { message: 'Not found' },
+              }),
             }),
           }),
         }),

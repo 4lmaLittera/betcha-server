@@ -12,7 +12,11 @@ export const upload = multer({
     if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Netinkamas failo tipas. Leidžiami tik JPEG ir PNG formatai.'));
+      cb(
+        new Error(
+          'Netinkamas failo tipas. Leidžiami tik JPEG ir PNG formatai.',
+        ),
+      );
     }
   },
 });

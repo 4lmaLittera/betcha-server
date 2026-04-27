@@ -81,7 +81,11 @@ describe('POST /api/tasks/:taskId/resolve', () => {
       .send(validBody);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ success: true, quest_id: 'quest-1', resolution: true });
+    expect(response.body).toEqual({
+      success: true,
+      quest_id: 'quest-1',
+      resolution: true,
+    });
     expect(mockRpc).toHaveBeenCalledWith('resolve_quest', {
       p_quest_id: 'quest-1',
       p_resolution_is_positive: true,
@@ -132,7 +136,10 @@ describe('POST /api/tasks/:taskId/resolve', () => {
       data: { ...baseQuest, creator_id: 'other-creator' },
       error: null,
     });
-    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    mockMembershipMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: null,
+    });
 
     const response = await request(app)
       .post('/api/tasks/quest-1/resolve')

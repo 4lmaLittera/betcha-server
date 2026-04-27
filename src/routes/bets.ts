@@ -10,7 +10,8 @@ const betRequests = new Map<string, number[]>();
 
 function betLimiter(req: Request, res: Response, next: NextFunction): void {
   // Susiejame su prisijungusio vartotojo ID arba IP
-  const identifier = (req as AuthenticatedRequest).user?.id || req.ip || 'unknown';
+  const identifier =
+    (req as AuthenticatedRequest).user?.id || req.ip || 'unknown';
   const now = Date.now();
   const windowMs = 10 * 1000; // 10 sekundžių laikas
   const limit = 3; // Max 3 statymai per intervalą
@@ -19,7 +20,11 @@ function betLimiter(req: Request, res: Response, next: NextFunction): void {
   const recentRequests = userRequests.filter((time) => now - time < windowMs);
 
   if (recentRequests.length >= limit) {
-    res.status(429).json({ error: 'Too Many Requests', message: 'Pristabdykite statymus. Bandykite dar kartą po kelių sekundžių.' });
+    res.status(429).json({
+      error: 'Too Many Requests',
+      message:
+        'Pristabdykite statymus. Bandykite dar kartą po kelių sekundžių.',
+    });
     return;
   }
 

@@ -90,7 +90,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -115,7 +118,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -139,7 +145,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(502);
     expect(response.body.verdict).toBe('unclear');
@@ -153,7 +162,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(502);
     expect(response.body.verdict).toBe('unclear');
@@ -168,7 +180,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(403);
     expect(mockUploadToStorage).not.toHaveBeenCalled();
@@ -183,7 +198,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(409);
     expect(mockUploadToStorage).not.toHaveBeenCalled();
@@ -198,7 +216,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(422);
     expect(mockUploadToStorage).not.toHaveBeenCalled();
@@ -210,7 +231,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/missing/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(404);
   });
@@ -226,7 +250,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
   it('401 — be autorizacijos', async () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(401);
   });
@@ -238,7 +265,10 @@ describe('POST /api/tasks/:taskId/evidence', () => {
     const response = await request(app)
       .post('/api/tasks/quest-1/evidence')
       .set('Authorization', 'Bearer valid-token')
-      .attach('photo', fakeJpeg, { filename: 'evidence.jpg', contentType: 'image/jpeg' });
+      .attach('photo', fakeJpeg, {
+        filename: 'evidence.jpg',
+        contentType: 'image/jpeg',
+      });
 
     expect(response.status).toBe(500);
     expect(mockEvaluateEvidence).not.toHaveBeenCalled();

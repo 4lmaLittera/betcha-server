@@ -3,7 +3,10 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 import logger from '../lib/logger';
 
-export const getStoreItems = async (_req: AuthenticatedRequest, res: Response) => {
+export const getStoreItems = async (
+  _req: AuthenticatedRequest,
+  res: Response,
+) => {
   try {
     const { data, error } = await supabase
       .from('store_items')
@@ -19,7 +22,10 @@ export const getStoreItems = async (_req: AuthenticatedRequest, res: Response) =
   }
 };
 
-export const purchaseItem = async (req: AuthenticatedRequest, res: Response) => {
+export const purchaseItem = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   const userId = req.user?.id;
   const { itemId } = req.body;
 
@@ -58,7 +64,7 @@ export const purchaseItem = async (req: AuthenticatedRequest, res: Response) => 
     // 3. Atlikti pirkimą (Supabase neturi transakcijų per JS SDK, todėl naudojame RPC arba eilės tvarka)
     // Kadangi tai svarbi operacija, geriausia būtų naudoti Postgres funkciją (RPC).
     // Bet kol kas įgyvendiname paprastą seką.
-    
+
     // Nuskaitome balansą
     const { error: updateError } = await supabase
       .from('profiles')
@@ -75,14 +81,12 @@ export const purchaseItem = async (req: AuthenticatedRequest, res: Response) => 
     if (invError) throw invError;
 
     // Registruojame transakciją
-    const { error: transError } = await supabase
-      .from('transactions')
-      .insert({
-        profile_id: userId,
-        amount: -item.price,
-        type: 'purchase',
-        reference_id: itemId
-      });
+    const { error: transError } = await supabase.from('transactions').insert({
+      profile_id: userId,
+      amount: -item.price,
+      type: 'purchase',
+      reference_id: itemId,
+    });
 
     if (transError) throw transError;
 

@@ -27,8 +27,11 @@ Atsakyk JSON formatu su laukais:
 
 Atsakyk TIK JSON objektu, be jokio papildomo teksto.`;
 
-export async function evaluateEvidence(input: EvidenceVerdictInput): Promise<EvidenceVerdict> {
-  const { initialImageUrl, evidenceImageUrl, taskTitle, taskDescription } = input;
+export async function evaluateEvidence(
+  input: EvidenceVerdictInput,
+): Promise<EvidenceVerdict> {
+  const { initialImageUrl, evidenceImageUrl, taskTitle, taskDescription } =
+    input;
 
   const FIRST_CHUNK_TIMEOUT_MS = 20000;
   const IDLE_TIMEOUT_MS = 5000;
@@ -56,8 +59,14 @@ export async function evaluateEvidence(input: EvidenceVerdictInput): Promise<Evi
                 type: 'text',
                 text: `Užduotis: ${taskTitle}\nAprašymas: ${taskDescription}\n\nPirmoji nuotrauka — PRIEŠ. Antroji — PO.`,
               },
-              { type: 'image_url', image_url: { url: initialImageUrl, detail: 'low' } },
-              { type: 'image_url', image_url: { url: evidenceImageUrl, detail: 'low' } },
+              {
+                type: 'image_url',
+                image_url: { url: initialImageUrl, detail: 'low' },
+              },
+              {
+                type: 'image_url',
+                image_url: { url: evidenceImageUrl, detail: 'low' },
+              },
             ],
           },
         ],
@@ -73,7 +82,7 @@ export async function evaluateEvidence(input: EvidenceVerdictInput): Promise<Evi
     }
   } catch (err) {
     if (controller.signal.aborted) {
-      throw new Error('AI_TIMEOUT');
+      throw new Error('AI_TIMEOUT', { cause: err });
     }
     throw err;
   } finally {
@@ -94,7 +103,10 @@ export async function evaluateEvidence(input: EvidenceVerdictInput): Promise<Evi
     throw new Error(`Netinkamas verdict: ${parsed.verdict}`);
   }
 
-  logger.info({ verdict: parsed.verdict }, 'Įrodymo nuotraukos verdict baigtas');
+  logger.info(
+    { verdict: parsed.verdict },
+    'Įrodymo nuotraukos verdict baigtas',
+  );
 
   return parsed;
 }

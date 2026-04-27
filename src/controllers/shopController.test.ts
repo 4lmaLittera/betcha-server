@@ -47,6 +47,8 @@ describe('ShopController', () => {
 
     expect(response.status).toBe(200);
     expect(eqMock).toHaveBeenCalledWith('is_active', true);
-    expect(response.body).toEqual([{ id: 'item-1', name: 'Aktyvus', is_active: true, price: 100 }]);
+    expect(response.body).toEqual([
+      { id: 'item-1', name: 'Aktyvus', is_active: true, price: 100 },
+    ]);
   });
 });

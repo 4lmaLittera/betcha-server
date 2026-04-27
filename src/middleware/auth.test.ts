@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { requireAuth, AuthenticatedRequest } from './auth';
 
 const mockGetUser = jest.fn();
@@ -15,7 +15,9 @@ jest.mock('../lib/logger', () => ({
   warn: jest.fn(),
 }));
 
-function createMockReq(headers: Record<string, string> = {}): AuthenticatedRequest {
+function createMockReq(
+  headers: Record<string, string> = {},
+): AuthenticatedRequest {
   return { headers } as AuthenticatedRequest;
 }
 
@@ -41,7 +43,9 @@ describe('requireAuth middleware', () => {
     await requireAuth(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Trūksta autorizacijos antraštės' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Trūksta autorizacijos antraštės',
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -67,7 +71,9 @@ describe('requireAuth middleware', () => {
 
     expect(mockGetUser).toHaveBeenCalledWith('invalid-token');
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Neteisingas arba pasibaigęs tokenas' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Neteisingas arba pasibaigęs tokenas',
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

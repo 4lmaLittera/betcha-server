@@ -18,7 +18,8 @@ export async function handleCreateTask(
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> {
-  const { title, description, bettingIndex, groupId, photoUrl } = req.body as CreateTaskBody;
+  const { title, description, bettingIndex, groupId, photoUrl } =
+    req.body as CreateTaskBody;
 
   if (!title || !title.trim()) {
     res.status(400).json({ error: 'Pavadinimas yra privalomas' });
@@ -108,7 +109,8 @@ export async function handleGetTaskById(
 
   const { data: quest, error: questError } = await supabase
     .from('quests')
-    .select(`
+    .select(
+      `
       id,
       group_id,
       title,
@@ -130,7 +132,8 @@ export async function handleGetTaskById(
         username,
         avatar_url
       )
-    `)
+    `,
+    )
     .eq('id', taskId)
     .maybeSingle();
 
@@ -151,7 +154,10 @@ export async function handleGetTaskById(
     .eq('quest_id', taskId);
 
   if (betsError) {
-    logger.error({ err: betsError, taskId }, 'Klaida gaunant lažybų agregaciją');
+    logger.error(
+      { err: betsError, taskId },
+      'Klaida gaunant lažybų agregaciją',
+    );
     res.status(500).json({ error: 'Nepavyko gauti lažybų duomenų' });
     return;
   }
@@ -169,8 +175,12 @@ export async function handleGetTaskById(
     }
   });
 
-  const creator = Array.isArray(quest.creator) ? quest.creator[0] : quest.creator;
-  const assigned = Array.isArray(quest.assigned) ? quest.assigned[0] : quest.assigned;
+  const creator = Array.isArray(quest.creator)
+    ? quest.creator[0]
+    : quest.creator;
+  const assigned = Array.isArray(quest.assigned)
+    ? quest.assigned[0]
+    : quest.assigned;
 
   res.status(200).json({
     id: quest.id,
@@ -223,7 +233,10 @@ export async function handleAssignTask(
     .maybeSingle();
 
   if (questError) {
-    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį priskyrimui');
+    logger.error(
+      { err: questError, taskId },
+      'Klaida gaunant užduotį priskyrimui',
+    );
     res.status(500).json({ error: 'Nepavyko gauti užduoties' });
     return;
   }
@@ -249,13 +262,18 @@ export async function handleAssignTask(
       .maybeSingle();
 
     if (requesterError) {
-      logger.error({ err: requesterError, taskId, userId }, 'Klaida tikrinant narystę');
+      logger.error(
+        { err: requesterError, taskId, userId },
+        'Klaida tikrinant narystę',
+      );
       res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
       return;
     }
 
     if (!requesterMembership || requesterMembership.role !== 'admin') {
-      res.status(403).json({ error: 'Neturite teisės priskirti šios užduoties' });
+      res
+        .status(403)
+        .json({ error: 'Neturite teisės priskirti šios užduoties' });
       return;
     }
   }
@@ -268,13 +286,18 @@ export async function handleAssignTask(
     .maybeSingle();
 
   if (assigneeError) {
-    logger.error({ err: assigneeError, taskId, assignedTo }, 'Klaida tikrinant priskyriamą narį');
+    logger.error(
+      { err: assigneeError, taskId, assignedTo },
+      'Klaida tikrinant priskyriamą narį',
+    );
     res.status(500).json({ error: 'Nepavyko patikrinti priskyriamo nario' });
     return;
   }
 
   if (!assigneeMembership) {
-    res.status(400).json({ error: 'Priskiriamas vartotojas nėra šios grupės narys' });
+    res
+      .status(400)
+      .json({ error: 'Priskiriamas vartotojas nėra šios grupės narys' });
     return;
   }
 
@@ -284,7 +307,10 @@ export async function handleAssignTask(
     .eq('id', taskId);
 
   if (updateError) {
-    logger.error({ err: updateError, taskId, assignedTo }, 'Nepavyko priskirti užduoties');
+    logger.error(
+      { err: updateError, taskId, assignedTo },
+      'Nepavyko priskirti užduoties',
+    );
     res.status(500).json({ error: 'Nepavyko priskirti užduoties' });
     return;
   }
@@ -317,7 +343,10 @@ export async function handleSubmitEvidence(
     .maybeSingle();
 
   if (questError) {
-    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį įrodymui');
+    logger.error(
+      { err: questError, taskId },
+      'Klaida gaunant užduotį įrodymui',
+    );
     res.status(500).json({ error: 'Nepavyko gauti užduoties' });
     return;
   }
@@ -328,7 +357,9 @@ export async function handleSubmitEvidence(
   }
 
   if (quest.assigned_to !== userId) {
-    res.status(403).json({ error: 'Įrodymą gali įkelti tik priskirtas vykdytojas' });
+    res
+      .status(403)
+      .json({ error: 'Įrodymą gali įkelti tik priskirtas vykdytojas' });
     return;
   }
 
@@ -339,13 +370,18 @@ export async function handleSubmitEvidence(
 
   if (!quest.initial_image_url) {
     res.status(422).json({
-      error: 'Užduotis neturi pradinės nuotraukos — įrodymo automatinis vertinimas neįmanomas',
+      error:
+        'Užduotis neturi pradinės nuotraukos — įrodymo automatinis vertinimas neįmanomas',
     });
     return;
   }
 
   const uploadId = crypto.randomUUID();
-  const evidenceImageUrl = await uploadToStorage(req.file.buffer, req.file.mimetype, uploadId);
+  const evidenceImageUrl = await uploadToStorage(
+    req.file.buffer,
+    req.file.mimetype,
+    uploadId,
+  );
 
   if (!evidenceImageUrl) {
     res.status(500).json({ error: 'Nepavyko įkelti įrodymo nuotraukos' });
@@ -379,7 +415,10 @@ export async function handleSubmitEvidence(
     logger.error({ err, taskId }, 'AI verdict klaida');
     res.status(502).json({
       verdict: 'unclear',
-      reason: message === 'AI_TIMEOUT' ? 'AI analizė užtruko per ilgai' : 'Nepavyko gauti AI verdikto',
+      reason:
+        message === 'AI_TIMEOUT'
+          ? 'AI analizė užtruko per ilgai'
+          : 'Nepavyko gauti AI verdikto',
       status: 'open',
     });
     return;
@@ -392,7 +431,10 @@ export async function handleSubmitEvidence(
     });
 
     if (rpcError) {
-      logger.error({ err: rpcError, taskId }, 'AI patvirtino, bet resolve_quest nepavyko');
+      logger.error(
+        { err: rpcError, taskId },
+        'AI patvirtino, bet resolve_quest nepavyko',
+      );
       res.status(500).json({ error: 'Nepavyko užbaigti užduoties' });
       return;
     }
@@ -457,7 +499,9 @@ export async function handleResolveTask(
   }
 
   if (typeof resolution_is_positive !== 'boolean') {
-    res.status(400).json({ error: 'resolution_is_positive turi būti boolean reikšmė' });
+    res
+      .status(400)
+      .json({ error: 'resolution_is_positive turi būti boolean reikšmė' });
     return;
   }
 
@@ -468,7 +512,10 @@ export async function handleResolveTask(
     .maybeSingle();
 
   if (questError) {
-    logger.error({ err: questError, taskId }, 'Klaida gaunant užduotį sprendimui');
+    logger.error(
+      { err: questError, taskId },
+      'Klaida gaunant užduotį sprendimui',
+    );
     res.status(500).json({ error: 'Nepavyko gauti užduoties' });
     return;
   }
@@ -487,7 +534,10 @@ export async function handleResolveTask(
       .maybeSingle();
 
     if (membershipError) {
-      logger.error({ err: membershipError, taskId, userId }, 'Klaida tikrinant narystę sprendimui');
+      logger.error(
+        { err: membershipError, taskId, userId },
+        'Klaida tikrinant narystę sprendimui',
+      );
       res.status(500).json({ error: 'Nepavyko patikrinti narystės' });
       return;
     }
@@ -521,7 +571,10 @@ export async function handleResolveTask(
       return;
     }
 
-    logger.info({ taskId, resolution: resolution_is_positive }, 'Užduotis sėkmingai išspręsta ir taškai perskirstyti');
+    logger.info(
+      { taskId, resolution: resolution_is_positive },
+      'Užduotis sėkmingai išspręsta ir taškai perskirstyti',
+    );
     res.status(200).json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Nežinoma klaida';

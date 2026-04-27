@@ -33,7 +33,10 @@ jest.mock('../lib/supabase', () => ({
       }
       if (table === 'quests') {
         return {
-          select: (_cols: string, opts?: { count?: string; head?: boolean }) => {
+          select: (
+            _cols: string,
+            opts?: { count?: string; head?: boolean },
+          ) => {
             if (opts?.count === 'exact' && opts?.head === true) {
               return {
                 eq: () => ({
@@ -42,7 +45,7 @@ jest.mock('../lib/supabase', () => ({
               };
             }
             return {
-              eq: (_col: string, _val: string) => ({
+              eq: () => ({
                 eq: () => ({
                   order: () => ({
                     limit: () => mockOpenQuestsResult(),
@@ -85,7 +88,10 @@ import app from '../app';
 describe('GET /api/groups/:id/stats', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockMembershipMaybeSingle.mockResolvedValue({ data: { id: 'mem-1' }, error: null });
+    mockMembershipMaybeSingle.mockResolvedValue({
+      data: { id: 'mem-1' },
+      error: null,
+    });
     mockOpenQuestsResult.mockResolvedValue({ data: [], error: null });
     mockResolvedQuestsResult.mockResolvedValue({ data: [], error: null });
     mockOpenCountResult.mockResolvedValue({ count: 0, error: null });

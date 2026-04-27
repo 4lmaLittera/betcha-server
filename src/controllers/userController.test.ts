@@ -6,16 +6,16 @@ jest.mock('../lib/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
-  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn() }
+  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }));
 
 jest.mock('../lib/supabase', () => ({
   supabase: {
     from: jest.fn(),
     auth: {
-      getUser: jest.fn()
-    }
-  }
+      getUser: jest.fn(),
+    },
+  },
 }));
 
 describe('UserController', () => {
@@ -31,20 +31,22 @@ describe('UserController', () => {
         username: 'testuser',
         avatar_url: 'https://avatar.url',
         balance: 1000,
-        total_points_collected: 2500
+        total_points_collected: 2500,
       };
 
       (supabase.auth.getUser as jest.Mock).mockResolvedValue({
         data: { user: mockUser },
-        error: null
+        error: null,
       });
 
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: mockProfile, error: null })
-          })
-        })
+            single: jest
+              .fn()
+              .mockResolvedValue({ data: mockProfile, error: null }),
+          }),
+        }),
       });
 
       const response = await request(app)
@@ -58,15 +60,18 @@ describe('UserController', () => {
     it('turėtų grąžinti 404, jei profilis nerastas', async () => {
       (supabase.auth.getUser as jest.Mock).mockResolvedValue({
         data: { user: { id: 'user-123' } },
-        error: null
+        error: null,
       });
 
       (supabase.from as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } })
-          })
-        })
+            single: jest.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Not found' },
+            }),
+          }),
+        }),
       });
 
       const response = await request(app)
