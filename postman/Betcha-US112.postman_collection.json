@@ -1,0 +1,195 @@
+{
+  "info": {
+    "name": "Betcha — US#112 Quest evidence + AI verdict",
+    "description": "Postman kolekcija reikalavimo US#112 (Quest uzbaigimas su AI verdiktu) integraciniam testavimui per POST /api/tasks/:taskId/evidence. Naudojama 2-o PKP nd 3 uzduotyje. Apima 5 requests / 19 assertion'u (funkciniai + nefunkciniai).\n\nKomponentai/lygiai:\n- HTTP klientas (Postman/Newman)\n- Express middleware (auth, multer)\n- taskController.evidence\n- Supabase Auth + Storage + DB (RPC resolve_quest)\n- OpenAI Vision (evidenceVerdict)\n\nAplinkos kintamieji (Betcha.postman_environment.json — bendras US#19 ir US#112):\n- baseUrl\n- token — JWT vartotojo, kuris yra quest.assigned_to (R1, R2, R5)\n- tokenOther — JWT kito grupes nario, NEYRA assigned_to (R3 403 testui)\n- questIdRejected — quest UUID R1 testui (status=open, initial=messy)\n- questIdApproved — quest UUID R2 testui (status=open, initial=messy)\n- nonExistentQuestId — atsitiktinis UUID 404 testui\n\nFixtures:\n- fixtures/messy-kitchen.jpg — netvarka (R1, R3, R4)\n- fixtures/clean-kitchen.jpg — svari virtuve (R2)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "R1: Atmestas verdiktas (AC-6) — funkcinis + nefunkcinis",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R1.1 — HTTP 200 OK (funkcinis)', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('R1.2 — verdict yra rejected (funkcinis)', () => pm.expect(body.verdict).to.eql('rejected'));",
+              "pm.test('R1.3 — status lieka open (funkcinis)', () => pm.expect(body.status).to.eql('open'));",
+              "pm.test('R1.4 — reason yra string ne tuscias (funkcinis)', () => { pm.expect(body.reason).to.be.a('string'); pm.expect(body.reason).to.not.be.empty; });",
+              "pm.test('R1.5 — response time < 20s (NEFUNKCINIS performance)', () => pm.expect(pm.response.responseTime).to.be.below(20000));",
+              "pm.test('R1.6 — Content-Type yra application/json (NEFUNKCINIS)', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "photo", "type": "file", "src": "fixtures/messy-kitchen.jpg", "description": "JPEG su matoma netvarka — siunciama kaip evidence, AI palygins su initial (taip pat messy) ir grazins rejected" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{questIdRejected}}/evidence",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{questIdRejected}}", "evidence"]
+        },
+        "description": "AC-6: kai AI grazina verdict='rejected', quest lieka open, body status='open', ai_verdict_reason uzpildytas. Nefunkciniai: response time + Content-Type."
+      }
+    },
+    {
+      "name": "R2: Sekmingas verdiktas (AC-5) — funkcinis + nefunkcinis",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R2.1 — HTTP 200 OK (funkcinis)', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('R2.2 — verdict yra approved (funkcinis)', () => pm.expect(body.verdict).to.eql('approved'));",
+              "pm.test('R2.3 — status pereina i completed (funkcinis)', () => pm.expect(body.status).to.eql('completed'));",
+              "pm.test('R2.4 — response time < 20s (NEFUNKCINIS performance)', () => pm.expect(pm.response.responseTime).to.be.below(20000));",
+              "pm.test('R2.5 — Content-Type yra application/json (NEFUNKCINIS)', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "photo", "type": "file", "src": "fixtures/clean-kitchen.jpg", "description": "Svaraus virtuves vaizdas — AI lygindamas su initial (messy) mato pazanga ir grazina approved" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{questIdApproved}}/evidence",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{questIdApproved}}", "evidence"]
+        },
+        "description": "AC-5: kai AI grazina verdict='approved', kvieciamas RPC resolve_quest, quest pereina i completed. Nefunkciniai: response time + Content-Type."
+      }
+    },
+    {
+      "name": "R3: 403 — ne assigned_to (AC-7) — saugumas",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R3.1 — HTTP 403 Forbidden (funkcinis)', () => pm.response.to.have.status(403));",
+              "const body = pm.response.json();",
+              "pm.test('R3.2 — body turi error lauka (funkcinis)', () => { pm.expect(body).to.have.property('error'); pm.expect(body.error).to.be.a('string'); });",
+              "pm.test('R3.3 — response time < 2s be AI (NEFUNKCINIS performance)', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{tokenOther}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "photo", "type": "file", "src": "fixtures/messy-kitchen.jpg" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{questIdRejected}}/evidence",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{questIdRejected}}", "evidence"]
+        },
+        "description": "AC-7: tik assigned_to gali ikelti evidence. Kai siuncia kitas grupes narys (tokenOther) — HTTP 403, AI nekvieciamas. Nefunkcinis: greitas atsakas (<2s) be AI."
+      }
+    },
+    {
+      "name": "R4: 401 — be autorizacijos — saugumas",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R4.1 — HTTP 401 Unauthorized (funkcinis)', () => pm.response.to.have.status(401));",
+              "pm.test('R4.2 — response time < 1s (NEFUNKCINIS performance)', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "photo", "type": "file", "src": "fixtures/messy-kitchen.jpg" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{questIdRejected}}/evidence",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{questIdRejected}}", "evidence"]
+        },
+        "description": "Be Authorization header — middleware turi atmesti su 401. Nefunkcinis: <1s, nes neina iki kontrolerio."
+      }
+    },
+    {
+      "name": "R5: 400 — be photo lauko — input validacija",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R5.1 — HTTP 400 Bad Request (funkcinis)', () => pm.response.to.have.status(400));",
+              "const body = pm.response.json();",
+              "pm.test('R5.2 — error pranesimas LT (funkcinis)', () => { pm.expect(body).to.have.property('error'); pm.expect(body.error).to.match(/Nuotrauka/i); });",
+              "pm.test('R5.3 — response time < 1s (NEFUNKCINIS performance)', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": []
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{questIdRejected}}/evidence",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{questIdRejected}}", "evidence"]
+        },
+        "description": "Validacijos testas: be photo form-data lauko — controller (taskController.evidence.test.ts:242) atmes su 400 ir LT pranesimu 'Nuotrauka...'. Nefunkcinis: <1s."
+      }
+    }
+  ]
+}
