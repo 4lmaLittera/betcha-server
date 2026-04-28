@@ -1,0 +1,1999 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "54440407-bce8-4fba-88a7-a634ed4fb641",
+        "name": "R1: Sekmingas statymas (200)",
+        "request": {
+          "description": {
+            "content": "Sekmingas statymas: postman3 turi 1000 balansa, stato 50. Tikimes 200 + bet objektas.",
+            "type": "text/plain"
+          },
+          "url": {
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"for\",\n  \"amount\": 50,\n  \"coefficient\": 1.5\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "6db0266d-68ef-4346-9b5b-fc786e49d452",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('R1.1 — HTTP 200', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.test('R1.2 — atsakyme yra bet objektas', () => pm.expect(body).to.have.property('bet'));",
+                "pm.test('R1.3 — Content-Type application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/json/));",
+                "pm.test('R1.4 — atsako laikas < 3s', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+              ],
+              "_lastExecutionId": "70e7245d-63ec-4015-a45b-23f8c21e67ce"
+            }
+          }
+        ]
+      },
+      {
+        "id": "a192444a-4f5c-41df-a8fb-295d9d25e4fa",
+        "name": "R2: Nepakanka tasku (400)",
+        "request": {
+          "description": {
+            "content": "Negative case: bandome statyti 999999, kai balansas tik 1000. Tikimes 400 'Nepakanka taskų'. Tikrina, kad place_bet RPC tinkamai meta klaida ir kontroleris ja perduoda.",
+            "type": "text/plain"
+          },
+          "url": {
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"against\",\n  \"amount\": 999999,\n  \"coefficient\": 2.0\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "88c5064c-a281-44c0-b26e-ce1f9443c7be",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('R2.1 — HTTP 400', () => pm.response.to.have.status(400));",
+                "const body = pm.response.json();",
+                "pm.test('R2.2 — error pranesimas LT (Nepakanka tasku)', () => pm.expect(body.error).to.match(/Nepakanka tašk/i));"
+              ],
+              "_lastExecutionId": "195dd3fe-7c8d-4a2b-81c8-a7a041101dc0"
+            }
+          }
+        ]
+      },
+      {
+        "id": "29c6bd66-ef78-4a4b-8292-93557b29f8b5",
+        "name": "R3: Be autentifikacijos (401)",
+        "request": {
+          "description": {
+            "content": "Saugumo testas: requireAuth middleware turi grazinti 401 be Authorization header'io. Veiksmas net nepasieks betsController.",
+            "type": "text/plain"
+          },
+          "url": {
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"for\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+          },
+          "auth": {
+            "type": "noauth",
+            "noauth": []
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "30cc2847-7db3-4fd5-8093-04eefb9401ba",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('R3.1 — HTTP 401', () => pm.response.to.have.status(401));",
+                "pm.test('R3.2 — atsako laikas < 1s (auth atmeta greitai)', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+              ],
+              "_lastExecutionId": "305d67ac-2977-40e5-b168-4e0cb7b8eaa3"
+            }
+          }
+        ]
+      },
+      {
+        "id": "c591585d-86de-4616-a734-038f6849e754",
+        "name": "R4: Neteisinga direction reiksme (400)",
+        "request": {
+          "description": {
+            "content": "Input validacija: direction privalo buti 'for' arba 'against'. Kontroleris turi atmesti 'maybe' su 400.",
+            "type": "text/plain"
+          },
+          "url": {
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"maybe\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "8aa9e183-2864-4e19-ae76-bb48660a6744",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('R4.1 — HTTP 400', () => pm.response.to.have.status(400));",
+                "const body = pm.response.json();",
+                "pm.test('R4.2 — error pranesimas dėl direction', () => pm.expect(body.error).to.match(/direction/i));"
+              ],
+              "_lastExecutionId": "750d1616-4908-43f9-9b8a-7a63c0d653ec"
+            }
+          }
+        ]
+      },
+      {
+        "id": "12b54208-3c3a-464f-9847-82003b3b88b1",
+        "name": "R5: Gauti quest'o lazybu sarasa (200)",
+        "request": {
+          "description": {
+            "content": "Funkcinis testas: po R1 turi buti bent vienas statymas (50 tasku 'for'). Tikrina atsakymo struktura (totalPool, forBets, againstBets).",
+            "type": "text/plain"
+          },
+          "url": {
+            "path": [
+              "api",
+              "bets",
+              "quest",
+              "{{questId}}"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "f54da73a-a03f-4d92-887d-88251b873fe7",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('R5.1 — HTTP 200', () => pm.response.to.have.status(200));",
+                "const body = pm.response.json();",
+                "pm.test('R5.2 — atsakyme yra totalPool (number)', () => pm.expect(body.totalPool).to.be.a('number'));",
+                "pm.test('R5.3 — atsakyme yra forBets (array)', () => pm.expect(body.forBets).to.be.an('array'));",
+                "pm.test('R5.4 — atsakyme yra againstBets (array)', () => pm.expect(body.againstBets).to.be.an('array'));",
+                "pm.test('R5.5 — totalPool >= 50 (po R1)', () => pm.expect(body.totalPool).to.be.at.least(50));"
+              ],
+              "_lastExecutionId": "f5e1b9b2-5bfc-4434-8f0e-e1d8c8ee98f8"
+            }
+          }
+        ]
+      }
+    ],
+    "auth": {
+      "type": "bearer",
+      "bearer": [
+        {
+          "type": "string",
+          "value": "{{token}}",
+          "key": "token"
+        }
+      ]
+    },
+    "event": [],
+    "variable": [],
+    "info": {
+      "_postman_id": "05af59a6-0416-4f0c-bb41-d09daed01fd3",
+      "name": "Betcha — Bets (Ainaras)",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Postman kolekcija lažybų (bets) endpoint'ų integraciniam testavimui. 5 request'ai dengia funkcinius (sėkmingas statymas, balanso mažinimas), validacijos (neteisinga direction, nepakanka taškų) ir nefunkcinius reikalavimus (autentifikacija). Apima dvi sistemos komponentų sąsajas: HTTP klientas ↔ Express middleware (auth + rate limiter) ↔ betsController ↔ Supabase RPC `place_bet` ↔ DB.\n\nPaleidimas: žr. README.md.",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment"
+    },
+    "id": "betcha-bets-env",
+    "name": "Betcha — Bets (Ainaras)",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://localhost:3000",
+        "key": "baseUrl"
+      },
+      {
+        "description": {
+          "content": "JWT vartotojo, kuris stato (postman3). Auto-set per `node postman/bets-testai/setup-bets.mjs`.",
+          "type": "text/plain"
+        },
+        "type": "any",
+        "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+        "key": "token"
+      },
+      {
+        "description": {
+          "content": "JWT antro grupes nario (postman4) - quest'o kurejas.",
+          "type": "text/plain"
+        },
+        "type": "any",
+        "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIwYjUwNTBjOS1mN2NlLTQ5ZTItOTY1Ny0yODBmZjYyZDhkMzQiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjU0LCJpYXQiOjE3NzczNTg2NTQsImVtYWlsIjoicG9zdG1hbjRAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbCI6InBvc3RtYW40QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6IjBiNTA1MGM5LWY3Y2UtNDllMi05NjU3LTI4MGZmNjJkOGQzNCJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzc3MzU4NjU0fV0sInNlc3Npb25faWQiOiJlNzYzNDhlYi1kYzUwLTRiYzMtYmRmMS1hMmY0NWJlMjc4NTMiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.L0CnRP7egDSZK9NfA5AEqU8KOVkg2-TXP4uo1hNCOnpVZ9Nh8OukyuIgXeK0erEhzf8OGjyQjQGxSERW1UufZQ",
+        "key": "tokenOther"
+      },
+      {
+        "description": {
+          "content": "Quest UUID, ant kurio statoma (sukurtas per setup-bets).",
+          "type": "text/plain"
+        },
+        "type": "any",
+        "value": "beecc9b7-a384-4960-9876-09382cfa49c0",
+        "key": "questId"
+      },
+      {
+        "description": {
+          "content": "Pradinis postman3 balansas (nustatomas per setup).",
+          "type": "text/plain"
+        },
+        "type": "any",
+        "value": "1000",
+        "key": "initialBalance"
+      }
+    ]
+  },
+  "globals": {
+    "id": "c6b5de94-0b71-4bb8-affe-1a51e47e1667",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 5,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 5,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 5,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 5,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 5,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 15,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 5,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 560.6,
+      "responseMin": 3,
+      "responseMax": 1567,
+      "responseSd": 555.1247067101231,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1777358716545,
+      "completed": 1777358719446
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 5,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "860aeb37-af83-4550-857e-1c02671bc73a",
+          "httpRequestId": "9475f0e0-13cd-4d6e-a9dc-16cd4e27d526"
+        },
+        "item": {
+          "id": "54440407-bce8-4fba-88a7-a634ed4fb641",
+          "name": "R1: Sekmingas statymas (200)",
+          "request": {
+            "description": {
+              "content": "Sekmingas statymas: postman3 turi 1000 balansa, stato 50. Tikimes 200 + bet objektas.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "bets"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"for\",\n  \"amount\": 50,\n  \"coefficient\": 1.5\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "6db0266d-68ef-4346-9b5b-fc786e49d452",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('R1.1 — HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('R1.2 — atsakyme yra bet objektas', () => pm.expect(body).to.have.property('bet'));",
+                  "pm.test('R1.3 — Content-Type application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/json/));",
+                  "pm.test('R1.4 — atsako laikas < 3s', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ],
+                "_lastExecutionId": "70e7245d-63ec-4015-a45b-23f8c21e67ce"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "Sekmingas statymas: postman3 turi 1000 balansa, stato 50. Tikimes 200 + bet objektas.",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "http",
+            "port": "3000",
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "7930b983-f7cd-48ad-b74c-8432918e88b9",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:3000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "115",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"beecc9b7-a384-4960-9876-09382cfa49c0\",\n  \"direction\": \"for\",\n  \"amount\": 50,\n  \"coefficient\": 1.5\n}"
+          },
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "type": "string",
+                "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+                "key": "token"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "21ed7108-a0fa-46bd-978a-465a2347db69",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "221"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"dd-0ni8cf1I71YPh1xW+jSy46Eim9U\""
+            },
+            {
+              "key": "Date",
+              "value": "Tue, 28 Apr 2026 06:45:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              98,
+              101,
+              116,
+              34,
+              58,
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              97,
+              100,
+              49,
+              51,
+              100,
+              52,
+              50,
+              100,
+              45,
+              101,
+              55,
+              54,
+              56,
+              45,
+              52,
+              56,
+              56,
+              97,
+              45,
+              56,
+              101,
+              97,
+              56,
+              45,
+              48,
+              99,
+              57,
+              57,
+              48,
+              51,
+              49,
+              54,
+              52,
+              48,
+              54,
+              48,
+              34,
+              44,
+              34,
+              113,
+              117,
+              101,
+              115,
+              116,
+              95,
+              105,
+              100,
+              34,
+              58,
+              34,
+              98,
+              101,
+              101,
+              99,
+              99,
+              57,
+              98,
+              55,
+              45,
+              97,
+              51,
+              56,
+              52,
+              45,
+              52,
+              57,
+              54,
+              48,
+              45,
+              57,
+              56,
+              55,
+              54,
+              45,
+              48,
+              57,
+              51,
+              56,
+              50,
+              99,
+              102,
+              97,
+              52,
+              57,
+              99,
+              48,
+              34,
+              44,
+              34,
+              112,
+              114,
+              111,
+              102,
+              105,
+              108,
+              101,
+              95,
+              105,
+              100,
+              34,
+              58,
+              34,
+              98,
+              48,
+              55,
+              52,
+              99,
+              102,
+              54,
+              97,
+              45,
+              48,
+              98,
+              99,
+              48,
+              45,
+              52,
+              52,
+              50,
+              53,
+              45,
+              56,
+              54,
+              100,
+              98,
+              45,
+              52,
+              97,
+              50,
+              53,
+              56,
+              100,
+              48,
+              97,
+              57,
+              48,
+              98,
+              48,
+              34,
+              44,
+              34,
+              97,
+              109,
+              111,
+              117,
+              110,
+              116,
+              34,
+              58,
+              53,
+              48,
+              44,
+              34,
+              100,
+              105,
+              114,
+              101,
+              99,
+              116,
+              105,
+              111,
+              110,
+              34,
+              58,
+              116,
+              114,
+              117,
+              101,
+              44,
+              34,
+              99,
+              111,
+              101,
+              102,
+              102,
+              105,
+              99,
+              105,
+              101,
+              110,
+              116,
+              34,
+              58,
+              49,
+              46,
+              53,
+              44,
+              34,
+              115,
+              116,
+              97,
+              116,
+              117,
+              115,
+              34,
+              58,
+              34,
+              112,
+              101,
+              110,
+              100,
+              105,
+              110,
+              103,
+              34,
+              125,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 606,
+          "responseSize": 221
+        },
+        "id": "54440407-bce8-4fba-88a7-a634ed4fb641",
+        "assertions": [
+          {
+            "assertion": "R1.1 — HTTP 200",
+            "skipped": false
+          },
+          {
+            "assertion": "R1.2 — atsakyme yra bet objektas",
+            "skipped": false
+          },
+          {
+            "assertion": "R1.3 — Content-Type application/json",
+            "skipped": false
+          },
+          {
+            "assertion": "R1.4 — atsako laikas < 3s",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "d18395f6-e542-4498-a52e-aeaa3b3cfddd",
+          "length": 5,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "4c492485-c761-46a3-a9c4-0438828435f4"
+        },
+        "item": {
+          "id": "a192444a-4f5c-41df-a8fb-295d9d25e4fa",
+          "name": "R2: Nepakanka tasku (400)",
+          "request": {
+            "description": {
+              "content": "Negative case: bandome statyti 999999, kai balansas tik 1000. Tikimes 400 'Nepakanka taskų'. Tikrina, kad place_bet RPC tinkamai meta klaida ir kontroleris ja perduoda.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "bets"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"against\",\n  \"amount\": 999999,\n  \"coefficient\": 2.0\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "88c5064c-a281-44c0-b26e-ce1f9443c7be",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('R2.1 — HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('R2.2 — error pranesimas LT (Nepakanka tasku)', () => pm.expect(body.error).to.match(/Nepakanka tašk/i));"
+                ],
+                "_lastExecutionId": "195dd3fe-7c8d-4a2b-81c8-a7a041101dc0"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "Negative case: bandome statyti 999999, kai balansas tik 1000. Tikimes 400 'Nepakanka taskų'. Tikrina, kad place_bet RPC tinkamai meta klaida ir kontroleris ja perduoda.",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "http",
+            "port": "3000",
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "b1445476-edc4-4b36-bb94-ce669cbc040a",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:3000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "123",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"beecc9b7-a384-4960-9876-09382cfa49c0\",\n  \"direction\": \"against\",\n  \"amount\": 999999,\n  \"coefficient\": 2.0\n}"
+          },
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "type": "string",
+                "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+                "key": "token"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "ddd1901c-96bb-4c72-80c3-7d1e5f324fa2",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "29"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"1d-xTmr8q2zQB3UHIVgykIXS10etpI\""
+            },
+            {
+              "key": "Date",
+              "value": "Tue, 28 Apr 2026 06:45:18 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              78,
+              101,
+              112,
+              97,
+              107,
+              97,
+              110,
+              107,
+              97,
+              32,
+              116,
+              97,
+              197,
+              161,
+              107,
+              197,
+              179,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 1567,
+          "responseSize": 29
+        },
+        "id": "a192444a-4f5c-41df-a8fb-295d9d25e4fa",
+        "assertions": [
+          {
+            "assertion": "R2.1 — HTTP 400",
+            "skipped": false
+          },
+          {
+            "assertion": "R2.2 — error pranesimas LT (Nepakanka tasku)",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "6ff84043-2c97-4df9-b01c-b5dc27257563",
+          "length": 5,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "6c51c027-14da-4ce2-a3af-317ec39b1fdb"
+        },
+        "item": {
+          "id": "29c6bd66-ef78-4a4b-8292-93557b29f8b5",
+          "name": "R3: Be autentifikacijos (401)",
+          "request": {
+            "description": {
+              "content": "Saugumo testas: requireAuth middleware turi grazinti 401 be Authorization header'io. Veiksmas net nepasieks betsController.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "bets"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"for\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+            },
+            "auth": {
+              "type": "noauth",
+              "noauth": []
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "30cc2847-7db3-4fd5-8093-04eefb9401ba",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('R3.1 — HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.test('R3.2 — atsako laikas < 1s (auth atmeta greitai)', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+                ],
+                "_lastExecutionId": "305d67ac-2977-40e5-b168-4e0cb7b8eaa3"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "Saugumo testas: requireAuth middleware turi grazinti 401 be Authorization header'io. Veiksmas net nepasieks betsController.",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "http",
+            "port": "3000",
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "44b2da0c-e09e-4277-8f7a-11f4422e3f7a",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:3000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "115",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"beecc9b7-a384-4960-9876-09382cfa49c0\",\n  \"direction\": \"for\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+          },
+          "auth": {
+            "type": "noauth",
+            "noauth": []
+          }
+        },
+        "response": {
+          "id": "92314f96-9692-422c-8417-02ceb9c9d028",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "46"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"2e-uabozajRtcP+1X/I8lsJjyHIhxU\""
+            },
+            {
+              "key": "Date",
+              "value": "Tue, 28 Apr 2026 06:45:18 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              84,
+              114,
+              197,
+              171,
+              107,
+              115,
+              116,
+              97,
+              32,
+              97,
+              117,
+              116,
+              111,
+              114,
+              105,
+              122,
+              97,
+              99,
+              105,
+              106,
+              111,
+              115,
+              32,
+              97,
+              110,
+              116,
+              114,
+              97,
+              197,
+              161,
+              116,
+              196,
+              151,
+              115,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 3,
+          "responseSize": 46
+        },
+        "id": "29c6bd66-ef78-4a4b-8292-93557b29f8b5",
+        "assertions": [
+          {
+            "assertion": "R3.1 — HTTP 401",
+            "skipped": false
+          },
+          {
+            "assertion": "R3.2 — atsako laikas < 1s (auth atmeta greitai)",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "efaf6d11-48c4-4798-98a3-bb94b2832534",
+          "length": 5,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "847899a7-4898-444b-b17e-39434e960915"
+        },
+        "item": {
+          "id": "c591585d-86de-4616-a734-038f6849e754",
+          "name": "R4: Neteisinga direction reiksme (400)",
+          "request": {
+            "description": {
+              "content": "Input validacija: direction privalo buti 'for' arba 'against'. Kontroleris turi atmesti 'maybe' su 400.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "bets"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"maybe\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "8aa9e183-2864-4e19-ae76-bb48660a6744",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('R4.1 — HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('R4.2 — error pranesimas dėl direction', () => pm.expect(body.error).to.match(/direction/i));"
+                ],
+                "_lastExecutionId": "750d1616-4908-43f9-9b8a-7a63c0d653ec"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "Input validacija: direction privalo buti 'for' arba 'against'. Kontroleris turi atmesti 'maybe' su 400.",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "http",
+            "port": "3000",
+            "path": [
+              "api",
+              "bets"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "56ca5cc9-55a0-4e90-9a20-585c9f36c195",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:3000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "117",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"questId\": \"beecc9b7-a384-4960-9876-09382cfa49c0\",\n  \"direction\": \"maybe\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+          },
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "type": "string",
+                "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+                "key": "token"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "552b4453-47a9-4e01-b008-4624cea4c329",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "57"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"39-HOGiM58PMO8OkU6o5pNH1oRfjQ0\""
+            },
+            {
+              "key": "Date",
+              "value": "Tue, 28 Apr 2026 06:45:18 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              101,
+              114,
+              114,
+              111,
+              114,
+              34,
+              58,
+              34,
+              100,
+              105,
+              114,
+              101,
+              99,
+              116,
+              105,
+              111,
+              110,
+              32,
+              116,
+              117,
+              114,
+              105,
+              32,
+              98,
+              197,
+              171,
+              116,
+              105,
+              32,
+              92,
+              34,
+              102,
+              111,
+              114,
+              92,
+              34,
+              32,
+              97,
+              114,
+              98,
+              97,
+              32,
+              92,
+              34,
+              97,
+              103,
+              97,
+              105,
+              110,
+              115,
+              116,
+              92,
+              34,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 98,
+          "responseSize": 57
+        },
+        "id": "c591585d-86de-4616-a734-038f6849e754",
+        "assertions": [
+          {
+            "assertion": "R4.1 — HTTP 400",
+            "skipped": false
+          },
+          {
+            "assertion": "R4.2 — error pranesimas dėl direction",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "ca89ffc2-37b3-458b-9aa3-87d6896f93bc",
+          "length": 5,
+          "cycles": 1,
+          "position": 4,
+          "iteration": 0,
+          "httpRequestId": "445f005f-4da2-4046-b341-f603f9a0ad8f"
+        },
+        "item": {
+          "id": "12b54208-3c3a-464f-9847-82003b3b88b1",
+          "name": "R5: Gauti quest'o lazybu sarasa (200)",
+          "request": {
+            "description": {
+              "content": "Funkcinis testas: po R1 turi buti bent vienas statymas (50 tasku 'for'). Tikrina atsakymo struktura (totalPool, forBets, againstBets).",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "bets",
+                "quest",
+                "{{questId}}"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "f54da73a-a03f-4d92-887d-88251b873fe7",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('R5.1 — HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('R5.2 — atsakyme yra totalPool (number)', () => pm.expect(body.totalPool).to.be.a('number'));",
+                  "pm.test('R5.3 — atsakyme yra forBets (array)', () => pm.expect(body.forBets).to.be.an('array'));",
+                  "pm.test('R5.4 — atsakyme yra againstBets (array)', () => pm.expect(body.againstBets).to.be.an('array'));",
+                  "pm.test('R5.5 — totalPool >= 50 (po R1)', () => pm.expect(body.totalPool).to.be.at.least(50));"
+                ],
+                "_lastExecutionId": "f5e1b9b2-5bfc-4434-8f0e-e1d8c8ee98f8"
+              }
+            }
+          ]
+        },
+        "request": {
+          "description": {
+            "content": "Funkcinis testas: po R1 turi buti bent vienas statymas (50 tasku 'for'). Tikrina atsakymo struktura (totalPool, forBets, againstBets).",
+            "type": "text/plain"
+          },
+          "url": {
+            "protocol": "http",
+            "port": "3000",
+            "path": [
+              "api",
+              "bets",
+              "quest",
+              "beecc9b7-a384-4960-9876-09382cfa49c0"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+              "system": true
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "fe0c8987-cd98-4ba7-b293-7f9edf752c63",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:3000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "type": "string",
+                "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjZmODNkZjhhLTZjY2ItNGNjOC1hMWI0LWI0MzAyODNkOTA4MyIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3dzYnNidHh0bGNkZ3RjaXRkbXB0LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJiMDc0Y2Y2YS0wYmMwLTQ0MjUtODZkYi00YTI1OGQwYTkwYjAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc3MzYyMjUzLCJpYXQiOjE3NzczNTg2NTMsImVtYWlsIjoicG9zdG1hbjNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzczNTg2NTN9XSwic2Vzc2lvbl9pZCI6IjAwMDQ3NzAyLTJjZGYtNDg5OC1hOTkxLTI3MzVhNDM4ODEzYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.HhrckwszNYgbNVgQrtxGy-wGexDP91KEMMfrqtdYP8VSTeYFbjJi8CcOnlbrBYefST0Y-M6xP5vUlgizK2MEsg",
+                "key": "token"
+              }
+            ]
+          }
+        },
+        "response": {
+          "id": "5304a0b9-b7d0-4602-bab2-1e4dad5d7a15",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "246"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"f6-TtjuJ7qRGnN/nkghLuHKyZrnS5E\""
+            },
+            {
+              "key": "Date",
+              "value": "Tue, 28 Apr 2026 06:45:19 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              116,
+              111,
+              116,
+              97,
+              108,
+              80,
+              111,
+              111,
+              108,
+              34,
+              58,
+              53,
+              48,
+              44,
+              34,
+              102,
+              111,
+              114,
+              66,
+              101,
+              116,
+              115,
+              34,
+              58,
+              91,
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              97,
+              100,
+              49,
+              51,
+              100,
+              52,
+              50,
+              100,
+              45,
+              101,
+              55,
+              54,
+              56,
+              45,
+              52,
+              56,
+              56,
+              97,
+              45,
+              56,
+              101,
+              97,
+              56,
+              45,
+              48,
+              99,
+              57,
+              57,
+              48,
+              51,
+              49,
+              54,
+              52,
+              48,
+              54,
+              48,
+              34,
+              44,
+              34,
+              97,
+              109,
+              111,
+              117,
+              110,
+              116,
+              34,
+              58,
+              53,
+              48,
+              44,
+              34,
+              99,
+              114,
+              101,
+              97,
+              116,
+              101,
+              100,
+              65,
+              116,
+              34,
+              58,
+              34,
+              50,
+              48,
+              50,
+              54,
+              45,
+              48,
+              52,
+              45,
+              50,
+              56,
+              84,
+              48,
+              54,
+              58,
+              52,
+              53,
+              58,
+              49,
+              55,
+              46,
+              49,
+              51,
+              54,
+              55,
+              55,
+              56,
+              43,
+              48,
+              48,
+              58,
+              48,
+              48,
+              34,
+              44,
+              34,
+              112,
+              114,
+              111,
+              102,
+              105,
+              108,
+              101,
+              34,
+              58,
+              123,
+              34,
+              105,
+              100,
+              34,
+              58,
+              34,
+              98,
+              48,
+              55,
+              52,
+              99,
+              102,
+              54,
+              97,
+              45,
+              48,
+              98,
+              99,
+              48,
+              45,
+              52,
+              52,
+              50,
+              53,
+              45,
+              56,
+              54,
+              100,
+              98,
+              45,
+              52,
+              97,
+              50,
+              53,
+              56,
+              100,
+              48,
+              97,
+              57,
+              48,
+              98,
+              48,
+              34,
+              44,
+              34,
+              117,
+              115,
+              101,
+              114,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              112,
+              111,
+              115,
+              116,
+              109,
+              97,
+              110,
+              51,
+              34,
+              44,
+              34,
+              97,
+              118,
+              97,
+              116,
+              97,
+              114,
+              95,
+              117,
+              114,
+              108,
+              34,
+              58,
+              110,
+              117,
+              108,
+              108,
+              125,
+              125,
+              93,
+              44,
+              34,
+              97,
+              103,
+              97,
+              105,
+              110,
+              115,
+              116,
+              66,
+              101,
+              116,
+              115,
+              34,
+              58,
+              91,
+              93,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 529,
+          "responseSize": 246
+        },
+        "id": "12b54208-3c3a-464f-9847-82003b3b88b1",
+        "assertions": [
+          {
+            "assertion": "R5.1 — HTTP 200",
+            "skipped": false
+          },
+          {
+            "assertion": "R5.2 — atsakyme yra totalPool (number)",
+            "skipped": false
+          },
+          {
+            "assertion": "R5.3 — atsakyme yra forBets (array)",
+            "skipped": false
+          },
+          {
+            "assertion": "R5.4 — atsakyme yra againstBets (array)",
+            "skipped": false
+          },
+          {
+            "assertion": "R5.5 — totalPool >= 50 (po R1)",
+            "skipped": false
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 599
+    },
+    "failures": [],
+    "error": null
+  }
+}

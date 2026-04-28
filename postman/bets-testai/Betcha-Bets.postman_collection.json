@@ -1,0 +1,166 @@
+{
+  "info": {
+    "name": "Betcha — Bets (Ainaras)",
+    "description": "Postman kolekcija lažybų (bets) endpoint'ų integraciniam testavimui. 5 request'ai dengia funkcinius (sėkmingas statymas, balanso mažinimas), validacijos (neteisinga direction, nepakanka taškų) ir nefunkcinius reikalavimus (autentifikacija). Apima dvi sistemos komponentų sąsajas: HTTP klientas ↔ Express middleware (auth + rate limiter) ↔ betsController ↔ Supabase RPC `place_bet` ↔ DB.\n\nPaleidimas: žr. README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "R1: Sekmingas statymas (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R1.1 — HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('R1.2 — atsakyme yra bet objektas', () => pm.expect(body).to.have.property('bet'));",
+              "pm.test('R1.3 — Content-Type application/json', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/application\\/json/));",
+              "pm.test('R1.4 — atsako laikas < 3s', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"for\",\n  \"amount\": 50,\n  \"coefficient\": 1.5\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/bets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "bets"]
+        },
+        "description": "Sekmingas statymas: postman3 turi 1000 balansa, stato 50. Tikimes 200 + bet objektas."
+      }
+    },
+    {
+      "name": "R2: Nepakanka tasku (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R2.1 — HTTP 400', () => pm.response.to.have.status(400));",
+              "const body = pm.response.json();",
+              "pm.test('R2.2 — error pranesimas LT (Nepakanka tasku)', () => pm.expect(body.error).to.match(/Nepakanka tašk/i));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"against\",\n  \"amount\": 999999,\n  \"coefficient\": 2.0\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/bets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "bets"]
+        },
+        "description": "Negative case: bandome statyti 999999, kai balansas tik 1000. Tikimes 400 'Nepakanka taskų'. Tikrina, kad place_bet RPC tinkamai meta klaida ir kontroleris ja perduoda."
+      }
+    },
+    {
+      "name": "R3: Be autentifikacijos (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R3.1 — HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('R3.2 — atsako laikas < 1s (auth atmeta greitai)', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"for\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/bets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "bets"]
+        },
+        "description": "Saugumo testas: requireAuth middleware turi grazinti 401 be Authorization header'io. Veiksmas net nepasieks betsController."
+      }
+    },
+    {
+      "name": "R4: Neteisinga direction reiksme (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R4.1 — HTTP 400', () => pm.response.to.have.status(400));",
+              "const body = pm.response.json();",
+              "pm.test('R4.2 — error pranesimas dėl direction', () => pm.expect(body.error).to.match(/direction/i));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"questId\": \"{{questId}}\",\n  \"direction\": \"maybe\",\n  \"amount\": 10,\n  \"coefficient\": 1.5\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/bets",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "bets"]
+        },
+        "description": "Input validacija: direction privalo buti 'for' arba 'against'. Kontroleris turi atmesti 'maybe' su 400."
+      }
+    },
+    {
+      "name": "R5: Gauti quest'o lazybu sarasa (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('R5.1 — HTTP 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('R5.2 — atsakyme yra totalPool (number)', () => pm.expect(body.totalPool).to.be.a('number'));",
+              "pm.test('R5.3 — atsakyme yra forBets (array)', () => pm.expect(body.forBets).to.be.an('array'));",
+              "pm.test('R5.4 — atsakyme yra againstBets (array)', () => pm.expect(body.againstBets).to.be.an('array'));",
+              "pm.test('R5.5 — totalPool >= 50 (po R1)', () => pm.expect(body.totalPool).to.be.at.least(50));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/bets/quest/{{questId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "bets", "quest", "{{questId}}"]
+        },
+        "description": "Funkcinis testas: po R1 turi buti bent vienas statymas (50 tasku 'for'). Tikrina atsakymo struktura (totalPool, forBets, againstBets)."
+      }
+    }
+  ]
+}
