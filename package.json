@@ -15,9 +15,10 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "jest",
-    "test:postman": "npx --yes newman run postman/Betcha-US19.postman_collection.json -e postman/Betcha-US19.postman_environment.json --working-dir postman --reporters cli,json --reporter-json-export postman/newman-report.json",
-    "test:postman:us112": "npx --yes newman run postman/Betcha-US112.postman_collection.json -e postman/Betcha-US112.postman_environment.json --working-dir postman --reporters cli,json --reporter-json-export postman/newman-report-us112.json",
-    "postman:jwt": "node postman/get-jwt.mjs"
+    "test:postman": "npx --yes newman run postman/Betcha-US19.postman_collection.json -e postman/Betcha.postman_environment.json --working-dir postman --reporters cli,json --reporter-json-export postman/newman-report.json",
+    "test:postman:us112": "npx --yes newman run postman/Betcha-US112.postman_collection.json -e postman/Betcha.postman_environment.json --working-dir postman --reporters cli,json --reporter-json-export postman/newman-report-us112.json",
+    "postman:jwt": "node postman/get-jwt.mjs",
+    "postman:setup:us112": "node postman/setup-us112.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.1",

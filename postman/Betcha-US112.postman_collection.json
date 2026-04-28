@@ -1,16 +1,11 @@
 {
   "info": {
     "name": "Betcha — US#112 Quest evidence + AI verdict",
-    "description": "Postman kolekcija reikalavimo US#112 (Quest uzbaigimas su AI verdiktu) integraciniam testavimui per POST /api/tasks/:taskId/evidence. Naudojama 2-o PKP nd 3 uzduotyje. Apima 5 requests / 19 assertion'u (funkciniai + nefunkciniai).\n\nKomponentai/lygiai:\n- HTTP klientas (Postman/Newman)\n- Express middleware (auth, multer)\n- taskController.evidence\n- Supabase Auth + Storage + DB (RPC resolve_quest)\n- OpenAI Vision (evidenceVerdict)\n\nAplinkos kintamieji (Betcha-US112.postman_environment.json):\n- baseUrl\n- tokenAssignee — JWT vartotojo, kuris yra assigned_to\n- tokenOther — JWT kito grupes nario (403 testui)\n- questIdRejected — quest UUID R1 testui (status=open, initial=messy)\n- questIdApproved — quest UUID R2 testui (status=open, initial=messy)\n- nonExistentQuestId — atsitiktinis UUID 404 testui\n\nFixtures:\n- fixtures/messy-kitchen.jpg — netvarka (R1, R3, R4)\n- fixtures/clean-kitchen.jpg — svari virtuve (R2)",
+    "description": "Postman kolekcija reikalavimo US#112 (Quest uzbaigimas su AI verdiktu) integraciniam testavimui per POST /api/tasks/:taskId/evidence. Naudojama 2-o PKP nd 3 uzduotyje. Apima 5 requests / 19 assertion'u (funkciniai + nefunkciniai).\n\nKomponentai/lygiai:\n- HTTP klientas (Postman/Newman)\n- Express middleware (auth, multer)\n- taskController.evidence\n- Supabase Auth + Storage + DB (RPC resolve_quest)\n- OpenAI Vision (evidenceVerdict)\n\nAplinkos kintamieji (Betcha.postman_environment.json — bendras US#19 ir US#112):\n- baseUrl\n- token — JWT vartotojo, kuris yra quest.assigned_to (R1, R2, R5)\n- tokenOther — JWT kito grupes nario, NEYRA assigned_to (R3 403 testui)\n- questIdRejected — quest UUID R1 testui (status=open, initial=messy)\n- questIdApproved — quest UUID R2 testui (status=open, initial=messy)\n- nonExistentQuestId — atsitiktinis UUID 404 testui\n\nFixtures:\n- fixtures/messy-kitchen.jpg — netvarka (R1, R3, R4)\n- fixtures/clean-kitchen.jpg — svari virtuve (R2)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
-    { "key": "tokenAssignee", "value": "", "type": "string", "description": "Supabase JWT — vartotojas, kuris yra quest.assigned_to" },
-    { "key": "tokenOther", "value": "", "type": "string", "description": "Supabase JWT — kitas grupes narys, kuris NEYRA assigned_to" },
-    { "key": "questIdRejected", "value": "", "type": "string", "description": "Quest UUID R1 testui — status=open, initial_image_url=messy" },
-    { "key": "questIdApproved", "value": "", "type": "string", "description": "Quest UUID R2 testui — status=open, initial_image_url=messy" },
-    { "key": "nonExistentQuestId", "value": "00000000-0000-0000-0000-000000000000", "type": "string", "description": "Atsitiktinis UUID — quest neegzistuoja" }
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" }
   ],
   "item": [
     {
@@ -35,7 +30,7 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{tokenAssignee}}", "type": "string" }]
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
         },
         "method": "POST",
         "header": [],
@@ -74,7 +69,7 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{tokenAssignee}}", "type": "string" }]
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
         },
         "method": "POST",
         "header": [],
@@ -180,7 +175,7 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{tokenAssignee}}", "type": "string" }]
+          "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
         },
         "method": "POST",
         "header": [],

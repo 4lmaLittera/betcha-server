@@ -36,4 +36,4 @@ Thumbs.db
 tsconfig.tsbuildinfo
 
 # Postman vykdymo artefaktai
-postman/newman-report.json
+postman/newman-report*.json

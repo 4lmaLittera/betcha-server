@@ -13,9 +13,8 @@ Naudojama:
 | Failas | Paskirtis |
 |--------|-----------|
 | `Betcha-US19.postman_collection.json` | US#19 kolekcija (4 request'ai, 13 assertions, tik funkciniai) |
-| `Betcha-US19.postman_environment.json` | US#19 aplinkos kintamieji (`baseUrl`, `token`) |
 | **`Betcha-US112.postman_collection.json`** | **US#112 kolekcija (5 request'ai, 19 assertions, funkciniai + nefunkciniai)** |
-| **`Betcha-US112.postman_environment.json`** | **US#112 aplinkos kintamieji (6 vnt.: 2 JWT, 2 questId, baseUrl, nonExistent)** |
+| **`Betcha.postman_environment.json`** | **Bendras env failas (`baseUrl`, `token`, `tokenOther`, `questIdRejected`, `questIdApproved`, `nonExistentQuestId`) — naudojamas abiejų kolekcijų** |
 | `fixtures/messy-kitchen.jpg` | JPEG su matoma netvarka *(įdėk savo failą)* |
 | `fixtures/clean-kitchen.jpg` | JPEG švarios virtuvės *(įdėk realų foto stabilesniam AI verdiktui)* |
 | `fixtures/black.png` | Visiškai juoda 1×1 PNG (US#19 AI_UNRECOGNIZED) |
@@ -102,54 +101,76 @@ cp .env.example .env  # užpildyti SUPABASE_*, OPENAI_API_KEY
 npm run dev
 ```
 
-### 2. Sukurti 2 vartotojus + gauti 2 JWT
-
-US#112 kolekcijai reikia **dviejų** vartotojų: `assignee` (kuris yra `assigned_to`) ir `other` (kitas grupės narys, kuris NĖRA assigned_to — naudojamas 403 testui).
+### 2. Vienos komandos automatinis setup (rekomenduoju)
 
 ```bash
-# 1-as JWT (assignee)
+npm run postman:setup:us112
+```
+
+Skriptas atlieka:
+1. Signup/login `postman1@gmail.com` ir `postman2@gmail.com` (slaptažodis `12345678`)
+2. Sukuria/randa bendrą grupę
+3. Įkelia `messy-kitchen.jpg` į Supabase Storage per `/api/analyze`
+4. Sukuria 2 quest'us (kuria `user2`, kad `assigned_to` taptų `user1`)
+5. Įrašo viską į `Betcha.postman_environment.json`
+
+Po šio žingsnio gali iškart paleisti `npm run test:postman:us112` — visi 19 assertion'ų turi PASS.
+
+> **Alternatyva (manualiai)**: jei nori naudoti savo test users, ir individualų setup'ą:
+
+### 2-alt. Sukurti 2 vartotojus + gauti 2 JWT
+
+US#112 kolekcijai reikia **dviejų** vartotojų: `assignee` (kuris yra `assigned_to`) ir `other` (kitas grupės narys, kuris NĖRA assigned_to — naudojamas R3 403 testui). Abu turi būti **toje pačioje grupėje**.
+
+Bendras `Betcha.postman_environment.json` (vienas failas US#19 ir US#112). `get-jwt.mjs` palaiko `--other` flag'ą antrojo vartotojo JWT įrašymui:
+
+```bash
+# 1-as JWT — į token (assignee)
 npm run postman:jwt -- assignee@test.com PasswordA123
-# Skopijuoti JWT į Betcha-US112.postman_environment.json → tokenAssignee
 
-# 2-as JWT (other user)
-npm run postman:jwt -- other@test.com PasswordB456
-# Skopijuoti JWT į → tokenOther
+# 2-as JWT — į tokenOther (kitas grupės narys, R3 403 testui)
+npm run postman:jwt -- other@test.com PasswordB456 --other
 ```
 
-Jei neturi 2-o test user'io — užregistruok per Supabase Auth UI arba per app prisijungimo ekraną.
+Jei 2-o test user'io neturi — užregistruok per Supabase Auth UI arba per app prisijungimo ekraną. Pridėk jį į **tą pačią grupę**, kurioje yra 1-as.
 
-### 3. Sukurti 2 quest'us
+### 3. Sukurti 2 quest'us su `assigned_to=token user`
 
-Per app arba `POST /api/tasks` reikia sukurti **2** atskirus quest'us, abu su:
-- `status = open`
-- `assigned_to = <assignee user id>`
-- `initial_image_url = <messy photo URL>` (nuotrauka, kurią AI laikys netvarkinga)
+`POST /api/tasks` **atsitiktinai** parenka `assigned_to` iš grupės narių, **išskyrus kūrėją** (žr. `taskController.ts:57-64`). Todėl, kad token user'is taptų `assigned_to`:
 
-Du atskiri quest'ai, nes:
-- **R1** (rejected) palieka quest `open` (galima pakartoti, bet R2 ant to paties quest'o nustatys į `completed`)
-- **R2** (approved) perveda quest į `completed` (po to nebegalima testuoti R1)
+> **Quest'us turi kurti `tokenOther` (kitas vartotojas)** — tada sistema priskirs token user'iui (jei grupėje tik 2 nariai).
 
 ```bash
-# Per app: prisijungti kaip assignee → sukurti 2 task'us su messy nuotrauka
-# arba per curl:
-curl -X POST http://localhost:3000/api/tasks \
-  -H "Authorization: Bearer $TOKEN_ASSIGNEE" \
+# Eksportuok 2-o user'io JWT iš env arba paleisk get-jwt
+export TOKEN_OTHER="<paste tokenOther JWT>"
+export GROUP_ID="<group UUID, kuriame abu nariai>"
+export MESSY_URL="https://example.com/messy.jpg"  # arba real Supabase Storage URL
+
+# Sukurk 2 quest'us
+curl -s -X POST http://localhost:3000/api/tasks \
+  -H "Authorization: Bearer $TOKEN_OTHER" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Test 1","description":"...","bettingIndex":3,"groupId":"<group>","photoUrl":"<messy>"}'
-# pakartoti antrą sykį → 2 questId
+  -d "{\"title\":\"Test rejected\",\"description\":\"R1 testas\",\"bettingIndex\":3,\"groupId\":\"$GROUP_ID\",\"photoUrl\":\"$MESSY_URL\"}"
+
+curl -s -X POST http://localhost:3000/api/tasks \
+  -H "Authorization: Bearer $TOKEN_OTHER" \
+  -H "Content-Type: application/json" \
+  -d "{\"title\":\"Test approved\",\"description\":\"R2 testas\",\"bettingIndex\":3,\"groupId\":\"$GROUP_ID\",\"photoUrl\":\"$MESSY_URL\"}"
 ```
 
-Įrašyti questId'us į `Betcha-US112.postman_environment.json`:
+Atsakyme bus `{ id, assigned_to, initial_image_url }`. Patikrink, kad `assigned_to` atitinka **token user'io** ID. Jei ne — pakartok `POST` (atsitiktinis pasirinkimas; jei grupė turi tik 2 narius, beveik garantuotai bus token user'is).
+
+Įrašyk abu `id` į `Betcha.postman_environment.json`:
 - `questIdRejected` ← 1-as quest
 - `questIdApproved` ← 2-as quest
 
 ### 4. Pasiruošti fixtures
 
 `fixtures/` aplanke:
-- ✅ `messy-kitchen.jpg` — sintetinė netvarka (R1, R3, R4)
-- ✅ `clean-kitchen.jpg` — sintetinė švari virtuvė (R2)
+- ✅ `messy-kitchen.jpg` — netvarka (R1, R3, R4)
+- ✅ `clean-kitchen.jpg` — švari virtuvė (R2)
 
-> **Patarimas**: sintetinis `clean-kitchen.jpg` gali nesuteikti stabiliai `verdict=approved` (DI gali abejoti). Jei R2 testas fail'inasi su `verdict=rejected`, **pakeisk** `clean-kitchen.jpg` į realią švarios virtuvės nuotrauką (≥50KB JPEG). Sintetiniai paveikslėliai veikia, bet realios nuotraukos duoda labiau prognozuojamą AI atsaką.
+> **Patarimas**: jei `clean-kitchen.jpg` neduos stabiliai `verdict=approved`, pakeisk realiu foto. Tas pats su `messy-kitchen.jpg` jei `rejected` neveikia.
 
 ### 5. Vykdyti per Newman
 
@@ -157,24 +178,24 @@ curl -X POST http://localhost:3000/api/tasks \
 npm run test:postman:us112
 ```
 
-Skriptas paleidžia visus 5 requests, vykdo 19 assertion'ų ir įrašo JSON ataskaitą į `postman/newman-report-us112.json`. Tikslas: **0 failures**.
+19 assertion'ų. Ataskaita: `postman/newman-report-us112.json`. Tikslas: **0 failures**.
 
 ### 6. Vykdyti per Postman GUI
 
 1. `Import` → `Betcha-US112.postman_collection.json`
-2. `Import` → `Betcha-US112.postman_environment.json`
-3. Aplinkoje įvesti 2 JWT + 2 questId
-4. Paleisti **R1 → R2 → R3 → R4 → R5** (eilė nesvarbi, bet R2 keičia state'ą — paleisk paskutinis, jei dirbi su tuo pačiu quest'u)
+2. `Import` → `Betcha.postman_environment.json` (bendras failas)
+3. Aplinkoje turi būti įrašyti `token`, `tokenOther`, `questIdRejected`, `questIdApproved`
+4. Eilė nesvarbi, bet R2 perveda quest į `completed` — paleisk po R1, jei vienam quest'ui
 
 ## Requests apžvalga
 
 | # | Request | Endpoint | Auth | HTTP | Funkciniai | Nefunkciniai |
 |---|---|---|---|---|---|---|
-| R1 | Atmestas verdiktas (AC-6) | POST evidence | tokenAssignee | 200 | verdict=rejected, status=open, reason | response time <20s, Content-Type |
-| R2 | Sėkmingas verdiktas (AC-5) | POST evidence | tokenAssignee | 200 | verdict=approved, status=completed | response time <20s, Content-Type |
+| R1 | Atmestas verdiktas (AC-6) | POST evidence | token | 200 | verdict=rejected, status=open, reason | response time <20s, Content-Type |
+| R2 | Sėkmingas verdiktas (AC-5) | POST evidence | token | 200 | verdict=approved, status=completed | response time <20s, Content-Type |
 | R3 | 403 ne assigned_to (AC-7) | POST evidence | tokenOther | 403 | error string | response time <2s |
 | R4 | 401 be auth | POST evidence | — | 401 | — | response time <1s |
-| R5 | 400 be photo | POST evidence | tokenAssignee | 400 | error LT (regex) | response time <1s |
+| R5 | 400 be photo | POST evidence | token | 400 | error LT (regex) | response time <1s |
 
 ## Postman ↔ Azure Test Plans susiejimas (US#112)
 
