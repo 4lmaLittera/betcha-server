@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "Betcha — US#19 Nuotraukos analize",
+    "description": "Postman kolekcija reikalavimo US#19 (Nuotraukos analize ir informacijos generavimas) testavimui per POST /api/analyze. Naudojama 1 ir 3 PKP nd uzduotyse. Kiekvienas request atitinka Azure Test Plan TC.\n\nAplinkos kintamieji:\n- baseUrl (pvz. http://localhost:3000)\n- token — galiojantis Supabase JWT (gaunamas is mobiliosios programos arba Supabase Auth)\n\nTest fixtures:\n- fixtures/messy-kitchen.jpg — netvarkinga virtuve (tinkama JPEG, ~> 50KB)\n- fixtures/black.png — visiskai juoda 1x1 PNG (DI nepripazistamas vaizdas)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token", "value": "", "type": "string", "description": "Supabase JWT (Bearer)" }
+  ],
+  "item": [
+    {
+      "name": "TC-2: Sekminga JPEG analize (AC-2)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TC-2.1 — HTTP 200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('TC-2.2 — atsakymas turi uploadId', () => pm.expect(body).to.have.property('uploadId').that.is.a('string'));",
+              "pm.test('TC-2.3 — verdict yra leistinas', () => pm.expect(['mess','clean','unclear']).to.include(body.verdict));",
+              "pm.test('TC-2.4 — title ne tuscias ir <= 60 simboliu', () => { pm.expect(body.title).to.be.a('string').and.not.empty; pm.expect(body.title.length).to.be.at.most(60); });",
+              "pm.test('TC-2.5 — description yra string', () => pm.expect(body.description).to.be.a('string').and.not.empty);",
+              "pm.test('TC-2.6 — bettingIndex skaicius nuo 1 iki 10', () => { pm.expect(body.bettingIndex).to.be.a('number'); pm.expect(body.bettingIndex).to.be.within(1,10); });",
+              "pm.test('TC-2.7 — photoUrl yra URL', () => pm.expect(body.photoUrl).to.match(/^https?:\\/\\//));",
+              "if (body.uploadId) pm.collectionVariables.set('lastSuccessUploadId', body.uploadId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "photo",
+              "type": "file",
+              "src": "fixtures/messy-kitchen.jpg",
+              "description": "JPEG nuotrauka su matoma netvarka"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "analyze"]
+        },
+        "description": "AC-2: OpenAI uzklausa + struct response. Patikrina, kad sekmingas atsakymas turi visus reikalingus laukus."
+      }
+    },
+    {
+      "name": "TC-5: AI_UNRECOGNIZED (AC-4)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TC-5.1 — HTTP 422', () => pm.response.to.have.status(422));",
+              "const body = pm.response.json();",
+              "pm.test('TC-5.2 — error kodas AI_UNRECOGNIZED', () => pm.expect(body.error).to.eql('AI_UNRECOGNIZED'));",
+              "pm.test('TC-5.3 — yra uploadId klaidos atveju', () => pm.expect(body).to.have.property('uploadId').that.is.a('string'));",
+              "pm.test('TC-5.4 — message lokalizuota LT', () => pm.expect(body.message).to.be.a('string').and.match(/atpazinti/i));",
+              "if (body.uploadId) pm.collectionVariables.set('lastFailedUploadId', body.uploadId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "photo",
+              "type": "file",
+              "src": "fixtures/black.png",
+              "description": "Visiskai juoda 1x1 PNG — DI negali atpazinti"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "analyze"]
+        },
+        "description": "AC-4: kai DI negali atpazinti vaizdo, serveris graza HTTP 422 su klaidos kodu AI_UNRECOGNIZED. UI turi rodyti rankinio suvedimo galimybe."
+      }
+    },
+    {
+      "name": "TC-5b: Be photo lauko (input validacija)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('TC-5b.1 — HTTP 400', () => pm.response.to.have.status(400));",
+              "const body = pm.response.json();",
+              "pm.test('TC-5b.2 — error pranesimas LT', () => pm.expect(body.error).to.match(/Nuotrauka/i));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": []
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "analyze"]
+        },
+        "description": "Negative case — siuncia POST /api/analyze be photo lauko, tikimes HTTP 400 su lietuviska klaida. Naudinga 3 uzduociai (integracinis testas tarp middleware ir controller'io)."
+      }
+    },
+    {
+      "name": "TC-6 prep: ai_logs query hint",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "health"]
+        },
+        "description": "Sis request'as nera testas. Tai placeholder priminimas: po TC-2 ir TC-5 ivykdymo, atidaryti Supabase Studio ai_logs lentele ir patikrinti irasus pagal lastSuccessUploadId ir lastFailedUploadId (saugomi kaip collection variable). Kontekstui — TC-6 (AC-5)."
+      }
+    }
+  ]
+}

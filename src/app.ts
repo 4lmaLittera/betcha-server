@@ -1,0 +1,59 @@
+import express from 'express';
+import cors from 'cors';
+import { supabase } from './lib/supabase';
+import logger from './lib/logger';
+import userRoutes from './routes/userRoutes';
+import betsRouter from './routes/bets';
+import uploadRouter from './routes/upload';
+import analyzeRouter from './routes/analyze';
+import tasksRouter from './routes/tasks';
+import shopRouter from './routes/shop';
+import inventoryRouter from './routes/inventory';
+import groupsRouter from './routes/groups';
+import { handleMulterError } from './middleware/multerError';
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use('/api/users', userRoutes);
+app.use('/api/bets', betsRouter);
+app.use('/api/shop', shopRouter);
+app.use('/api/inventory', inventoryRouter);
+
+app.get('/health', async (_req, res) => {
+  try {
+    const { error } = await supabase.from('profiles').select('id').limit(1);
+
+    if (error) {
+      logger.error({ err: error }, 'Duomenų bazės ryšys nepasiekiamas');
+      res.status(503).json({
+        status: 'error',
+        message: 'Duomenų bazės ryšys nepasiekiamas',
+        details: error.message,
+      });
+      return;
+    }
+
+    logger.info('DB health check sėkmingas');
+    res.status(200).json({ status: 'ok', database: 'connected' });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Nežinoma klaida';
+    logger.error({ err }, 'Duomenų bazės ryšio klaida');
+    res.status(503).json({
+      status: 'error',
+      message: 'Duomenų bazės ryšys nepasiekiamas',
+      details: message,
+    });
+  }
+});
+
+app.use('/api/upload', uploadRouter);
+app.use('/api/analyze', analyzeRouter);
+app.use('/api/tasks', tasksRouter);
+app.use('/api/groups', groupsRouter);
+
+app.use(handleMulterError);
+
+export default app;
